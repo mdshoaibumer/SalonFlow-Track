@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_appointment_history_appt;
+DROP INDEX IF EXISTS idx_appointment_services_appt;
+DROP INDEX IF EXISTS idx_appointments_status;
+DROP INDEX IF EXISTS idx_appointments_customer;
+DROP INDEX IF EXISTS idx_appointments_staff;
+DROP INDEX IF EXISTS idx_appointments_date;
+DROP TABLE IF EXISTS appointment_history;
+DROP TABLE IF EXISTS appointment_services;
+DROP TABLE IF EXISTS appointments;

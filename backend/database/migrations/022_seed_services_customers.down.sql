@@ -1,0 +1,2 @@
+DELETE FROM customers WHERE id LIKE '019726b0-%';
+DELETE FROM services WHERE id LIKE '019726a0-%';

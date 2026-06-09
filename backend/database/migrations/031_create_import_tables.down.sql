@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_import_templates_entity;
+DROP INDEX IF EXISTS idx_import_logs_status;
+DROP INDEX IF EXISTS idx_import_logs_job;
+DROP INDEX IF EXISTS idx_import_jobs_created;
+DROP INDEX IF EXISTS idx_import_jobs_entity;
+DROP INDEX IF EXISTS idx_import_jobs_status;
+DROP TABLE IF EXISTS import_logs;
+DROP TABLE IF EXISTS import_jobs;
+DROP TABLE IF EXISTS import_templates;
