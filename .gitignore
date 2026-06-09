@@ -1,0 +1,39 @@
+# Build outputs
+build/bin/
+frontend/dist/
+backend/dist/
+
+# Database files
+*.db
+*.db-wal
+*.db-shm
+backend/data/
+
+# Logs
+logs/
+*.log
+
+# Go
+backend/vendor/
+
+# Node
+frontend/node_modules/
+
+# Test artifacts
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+.env
+.env.local
+.env.production
