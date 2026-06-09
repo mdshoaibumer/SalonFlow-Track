@@ -1,0 +1,25 @@
+app:
+  name: "SalonFlow Track"
+  environment: "development"
+
+server:
+  host: "127.0.0.1"
+  port: "8080"
+  read_timeout_sec: 30
+  write_timeout_sec: 30
+  shutdown_timeout_sec: 10
+
+database:
+  path: "data/salonflow.db"
+  migration_dir: "../database/migrations"
+  max_open_conns: 1
+
+log:
+  level: "debug"
+  format: "text"
+  output: "stdout"
+  file_path: "logs/salonflow.log"
+  max_size_mb: 100
+  max_backups: 3
+  max_age_days: 28
+  compress: false
