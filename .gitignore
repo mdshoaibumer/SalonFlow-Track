@@ -37,3 +37,8 @@ desktop.ini
 .env
 .env.local
 .env.production
+
+# Build artifacts
+frontend/tsconfig.tsbuildinfo
+go.work.sum
+.copilot-bridge.json
