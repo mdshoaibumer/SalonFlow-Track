@@ -1,4 +1,0 @@
--- Rollback: 006_add_soft_delete_to_phase1_tables
--- Note: SQLite does not support DROP COLUMN before 3.35.0
--- This migration is practically irreversible in older SQLite versions
--- For dev environments, recreate the database instead

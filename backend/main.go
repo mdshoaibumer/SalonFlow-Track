@@ -54,7 +54,6 @@ func run() error {
 			WebviewIsTransparent:              false,
 			WindowIsTranslucent:               false,
 			DisableFramelessWindowDecorations: false,
-			WebviewUserDataPath:               "",
 			Theme:                             windows.SystemDefault,
 		},
 	})

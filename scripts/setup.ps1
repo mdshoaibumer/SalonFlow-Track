@@ -58,6 +58,7 @@ Write-Host "  Frontend dependencies installed" -ForegroundColor Green
 
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Cyan
 Write-Host "`nTo start development:" -ForegroundColor Yellow
-Write-Host "  Backend:  cd backend && go run ./cmd/server/" -ForegroundColor White
-Write-Host "  Frontend: cd frontend && npm run dev" -ForegroundColor White
+Write-Host "  cd backend && wails dev" -ForegroundColor White
+Write-Host "`nTo build the production exe:" -ForegroundColor Yellow
+Write-Host "  .\scripts\build-desktop.ps1" -ForegroundColor White
 Write-Host ""

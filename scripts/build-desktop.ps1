@@ -22,14 +22,12 @@ if ($Clean) {
     exit 0
 }
 
-# Consolidate all migrations into backend/database/migrations/
-Write-Host "Consolidating migrations..." -ForegroundColor Yellow
-$RootMigrations = Join-Path $RootDir "database" "migrations"
+# Verify migrations exist
+Write-Host "Checking migrations..." -ForegroundColor Yellow
 $BackendMigrations = Join-Path $BackendDir "database" "migrations"
-if (Test-Path $RootMigrations) {
-    Copy-Item (Join-Path $RootMigrations "*") $BackendMigrations -Force
-}
-Write-Host "Migrations consolidated: $((Get-ChildItem $BackendMigrations -Filter '*.sql').Count) SQL files" -ForegroundColor Green
+$migCount = (Get-ChildItem $BackendMigrations -Filter '*.sql' -ErrorAction SilentlyContinue).Count
+if ($migCount -eq 0) { throw "No migration files found in $BackendMigrations" }
+Write-Host "Migrations ready: $migCount SQL files" -ForegroundColor Green
 
 # Setup environment
 $env:CGO_ENABLED = "1"

@@ -2,6 +2,7 @@
 build/bin/
 frontend/dist/
 backend/dist/
+*.exe
 
 # Database files
 *.db

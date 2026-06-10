@@ -11,7 +11,7 @@ server:
 
 database:
   path: "data/salonflow.db"
-  migration_dir: "../database/migrations"
+  migration_dir: "database/migrations"
   max_open_conns: 1
 
 log:

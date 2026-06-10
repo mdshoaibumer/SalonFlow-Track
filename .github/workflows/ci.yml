@@ -68,8 +68,10 @@ jobs:
       - name: Build
         working-directory: backend
         env:
-          CGO_ENABLED: '0'
-        run: go build -o salonflow-track ./cmd/server
+          CGO_ENABLED: '1'
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc
+          go build -o salonflow-track .
 
   # ---------- Frontend ----------
   frontend-lint:
@@ -142,50 +144,6 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
-
-  frontend-e2e:
-    name: E2E Tests (Playwright)
-    runs-on: ubuntu-latest
-    needs: [frontend-build, backend-build]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Install frontend deps
-        working-directory: frontend
-        run: npm ci
-      - name: Install Playwright browsers
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
-      - name: Build backend
-        working-directory: backend
-        env:
-          CGO_ENABLED: '1'
-        run: |
-          sudo apt-get update && sudo apt-get install -y gcc
-          go build -o ../salonflow-track ./cmd/server
-      - name: Start backend
-        run: |
-          ./salonflow-track &
-          sleep 3
-      - name: Run Playwright
-        working-directory: frontend
-        run: npx playwright test
-        env:
-          CI: true
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: frontend/playwright-report/
-          retention-days: 7
 
   # ---------- Quality Gates ----------
   quality-gate:

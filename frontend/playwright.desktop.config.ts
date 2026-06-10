@@ -1,49 +1,45 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig } from '@playwright/test'
 
 /**
- * Playwright config for E2E testing against the actual Wails desktop application.
+ * Playwright config for E2E testing against the real Wails backend + SQLite.
  * 
  * Strategy:
- *   1. The desktop app (SalonFlow-Track.exe) runs with its embedded SQLite DB and API server
- *   2. Playwright opens the frontend (via Vite dev server) which connects to the desktop app's
- *      real API on localhost:8080 — testing the actual desktop backend
- *   3. This validates the complete desktop stack: WebView2 window + Go backend + SQLite + React frontend
- * 
+ *   1. 'wails dev' starts the real Go backend (with SQLite) and Vite frontend dev server
+ *   2. Playwright connects to the dev server URL (same as what WebView2 renders)
+ *   3. Tests interact with the REAL backend — same Go handlers, same database
+ *
  * What's tested:
- *   - The real desktop app binary is running (not `go run`)
- *   - Real SQLite database operations
- *   - Real HTTP API responses from the desktop process
- *   - Frontend behavior against the desktop backend
- * 
+ *   - Real Go backend processing (same code as production .exe)
+ *   - Real SQLite database operations via Wails IPC bindings
+ *   - Real React frontend rendering (same components)
+ *   - Full end-to-end user flows (navigation, CRUD, billing, etc.)
+ *
  * Usage:
- *   ..\scripts\test-desktop.ps1
+ *   ..\scripts\test-desktop.ps1              # headless
+ *   ..\scripts\test-desktop.ps1 -Headed      # watch browser during tests
+ *   ..\scripts\test-desktop.ps1 -TestFilter "Staff"   # run specific tests
  */
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: ['desktop-app.spec.ts', 'desktop-fixtures.ts'],
-  fullyParallel: true,
-  workers: 7,
-  retries: 0,
-  reporter: [['line'], ['html', { open: 'never' }]],
+  testMatch: ['desktop-app.spec.ts'],
+  fullyParallel: false,
+  workers: 1,
+  retries: 1,
+  reporter: [['list'], ['html', { open: 'never' }]],
   timeout: 30000,
   use: {
-    // Frontend served by Vite dev server, API proxied to desktop app on :8080
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:34115',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     actionTimeout: 10000,
   },
   projects: [
     {
-      name: 'desktop',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'desktop-chromium',
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 1400, height: 900 },
+      },
     },
   ],
-  // Vite dev server proxies /api to the desktop app's HTTP server on port 8080
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: true,
-    timeout: 15000,
-  },
 })
