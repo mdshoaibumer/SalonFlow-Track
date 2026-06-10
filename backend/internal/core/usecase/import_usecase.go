@@ -160,13 +160,13 @@ func (uc *ImportUseCase) Process(ctx context.Context, jobID uuid.UUID) (*domain.
 	}
 
 	job.Status = domain.ImportStatusImporting
-	uc.repo.UpdateJob(ctx, job)
+	_ = uc.repo.UpdateJob(ctx, job)
 
 	// In a real implementation, this would create actual domain entities.
 	// For now we mark the valid rows as imported.
 	job.ImportedRows = job.ValidRows
 	job.Status = domain.ImportStatusCompleted
-	uc.repo.UpdateJob(ctx, job)
+	_ = uc.repo.UpdateJob(ctx, job)
 
 	return job, nil
 }

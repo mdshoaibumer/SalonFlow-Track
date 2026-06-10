@@ -100,14 +100,14 @@ func TestEngine_ValidateRow(t *testing.T) {
 
 	// Invalid phone
 	row3 := map[string]string{"name": "Test", "phone": "abc"}
-	valid, errs = e.ValidateRow(row3, "staff")
+	valid, _ = e.ValidateRow(row3, "staff")
 	if valid {
 		t.Error("invalid phone should fail")
 	}
 
 	// Invalid email
 	row4 := map[string]string{"name": "Test", "email": "not-an-email"}
-	valid, errs = e.ValidateRow(row4, "staff")
+	valid, _ = e.ValidateRow(row4, "staff")
 	if valid {
 		t.Error("invalid email should fail")
 	}

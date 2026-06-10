@@ -177,7 +177,7 @@ func TestImportRepository_Logs(t *testing.T) {
 	}
 
 	// List errors only
-	logs, total, _ = repo.ListLogs(ctx, job.ID, domain.ImportLogError, 10, 0)
+	_, total, _ = repo.ListLogs(ctx, job.ID, domain.ImportLogError, 10, 0)
 	if total != 1 {
 		t.Errorf("error total = %d, want 1", total)
 	}

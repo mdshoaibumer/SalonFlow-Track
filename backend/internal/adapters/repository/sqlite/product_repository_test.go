@@ -216,7 +216,7 @@ func TestProductRepository_ListProducts(t *testing.T) {
 	}
 
 	// Search
-	products, total, err = repo.ListProducts(ctx, ports.ProductFilter{Search: "Shampoo", Limit: 10})
+	_, total, err = repo.ListProducts(ctx, ports.ProductFilter{Search: "Shampoo", Limit: 10})
 	if err != nil {
 		t.Fatalf("ListProducts search: %v", err)
 	}
