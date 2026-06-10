@@ -1,55 +1,41 @@
-import { apiClient } from './api-client'
 import type { MembershipPlan, MemberSubscription, MembershipStats } from '@/types'
 
-export async function listPlans(): Promise<MembershipPlan[]> {
-  const response = await apiClient.get<MembershipPlan[]>('/memberships/plans')
-  if (!response.success) throw new Error(response.error?.message || 'Failed to list plans')
-  return response.data || []
+export async function createPlan(data: any): Promise<void> {
+  const services = data.services || []
+  await window.go.main.MembershipService.CreatePlan(data, services)
 }
 
-export async function getPlan(id: string): Promise<MembershipPlan> {
-  const response = await apiClient.get<MembershipPlan>(`/memberships/plans/${id}`)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to get plan')
-  return response.data
-}
-
-export async function createPlan(data: Partial<MembershipPlan>): Promise<MembershipPlan> {
-  const response = await apiClient.post<MembershipPlan>('/memberships/plans', data)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to create plan')
-  return response.data
-}
-
-export async function updatePlan(id: string, data: Partial<MembershipPlan>): Promise<MembershipPlan> {
-  const response = await apiClient.put<MembershipPlan>(`/memberships/plans/${id}`, data)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to update plan')
-  return response.data
+export async function updatePlan(id: string, data: any): Promise<void> {
+  const services = data.services || []
+  await window.go.main.MembershipService.UpdatePlan({ ...data, id }, services)
 }
 
 export async function deletePlan(id: string): Promise<void> {
-  const response = await apiClient.delete(`/memberships/plans/${id}`)
-  if (!response.success) throw new Error(response.error?.message || 'Failed to delete plan')
+  await window.go.main.MembershipService.DeletePlan(id)
+}
+
+export async function getPlan(id: string): Promise<MembershipPlan> {
+  return window.go.main.MembershipService.GetPlan(id)
+}
+
+export async function listPlans(): Promise<MembershipPlan[]> {
+  return window.go.main.MembershipService.ListPlans('')
 }
 
 export async function sellPlan(data: { plan_id: string; customer_id: string; amount_paid: number }): Promise<MemberSubscription> {
-  const response = await apiClient.post<MemberSubscription>('/memberships/sell', data)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to sell plan')
-  return response.data
+  return window.go.main.MembershipService.SellPlan(data.customer_id, data.plan_id, data.amount_paid)
 }
 
-export async function useSession(subscriptionId: string): Promise<MemberSubscription> {
-  const response = await apiClient.post<MemberSubscription>(`/memberships/use-session/${subscriptionId}`, {})
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to use session')
-  return response.data
+export async function useSession(subscriptionId: string): Promise<void> {
+  await window.go.main.MembershipService.UseSession(subscriptionId)
 }
 
-export async function listSubscriptions(page = 1, perPage = 20): Promise<{ data: MemberSubscription[]; total: number }> {
-  const response = await apiClient.get<MemberSubscription[]>(`/memberships/subscriptions?page=${page}&per_page=${perPage}`)
-  if (!response.success) throw new Error(response.error?.message || 'Failed to list subscriptions')
-  return { data: response.data || [], total: response.meta?.total || 0 }
+export async function listSubscriptions(page = 1, perPage = 20) {
+  const offset = (page - 1) * perPage
+  const [subscriptions, total] = await window.go.main.MembershipService.ListSubscriptions('', '', perPage, offset)
+  return { data: subscriptions || [], meta: { page, per_page: perPage, total, total_pages: Math.ceil(total / perPage) } }
 }
 
 export async function getMembershipStats(): Promise<MembershipStats> {
-  const response = await apiClient.get<MembershipStats>('/memberships/stats')
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to get stats')
-  return response.data
+  return window.go.main.MembershipService.GetMembershipStats()
 }

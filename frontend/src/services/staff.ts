@@ -1,4 +1,3 @@
-import { apiClient } from './api-client'
 import type { Staff, StaffStats, CreateStaffInput, UpdateStaffInput } from '@/types'
 
 export interface ListStaffParams {
@@ -20,62 +19,40 @@ export interface ListStaffResponse {
 }
 
 export async function listStaff(params: ListStaffParams = {}): Promise<ListStaffResponse> {
-  const query = new URLSearchParams()
-  if (params.page) query.set('page', String(params.page))
-  if (params.per_page) query.set('per_page', String(params.per_page))
-  if (params.search) query.set('search', params.search)
-  if (params.status) query.set('status', params.status)
-  if (params.designation) query.set('designation', params.designation)
-
-  const qs = query.toString()
-  const path = qs ? `/staff?${qs}` : '/staff'
-  const response = await apiClient.get<Staff[]>(path)
-
-  if (!response.success) {
-    throw new Error(response.error?.message || 'Failed to fetch staff')
-  }
-
+  const result = await window.go.main.StaffService.ListStaff({
+    search: params.search || '',
+    status: params.status || '',
+    designation: params.designation || '',
+    page: params.page || 1,
+    per_page: params.per_page || 20,
+  })
   return {
-    staff: response.data || [],
-    meta: response.meta as { page: number; per_page: number; total: number; total_pages: number } || { page: 1, per_page: 20, total: 0, total_pages: 0 },
+    staff: result.staff || [],
+    meta: {
+      page: result.page,
+      per_page: result.per_page,
+      total: result.total,
+      total_pages: result.total_pages,
+    },
   }
 }
 
 export async function getStaffById(id: string): Promise<Staff> {
-  const response = await apiClient.get<Staff>(`/staff/${id}`)
-  if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to fetch staff')
-  }
-  return response.data
+  return window.go.main.StaffService.GetStaff(id)
 }
 
 export async function createStaff(input: CreateStaffInput): Promise<Staff> {
-  const response = await apiClient.post<Staff>('/staff', input)
-  if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to create staff')
-  }
-  return response.data
+  return window.go.main.StaffService.CreateStaff(input)
 }
 
 export async function updateStaff(id: string, input: UpdateStaffInput): Promise<Staff> {
-  const response = await apiClient.put<Staff>(`/staff/${id}`, input)
-  if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to update staff')
-  }
-  return response.data
+  return window.go.main.StaffService.UpdateStaff(id, input)
 }
 
 export async function deleteStaff(id: string): Promise<void> {
-  const response = await apiClient.delete<{ message: string }>(`/staff/${id}`)
-  if (!response.success) {
-    throw new Error(response.error?.message || 'Failed to delete staff')
-  }
+  await window.go.main.StaffService.DeleteStaff(id)
 }
 
 export async function getStaffStats(): Promise<StaffStats> {
-  const response = await apiClient.get<StaffStats>('/staff/stats')
-  if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to fetch staff stats')
-  }
-  return response.data
+  return window.go.main.StaffService.GetStaffStats()
 }

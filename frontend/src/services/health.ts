@@ -1,5 +1,3 @@
-import { apiClient } from './api-client'
-
 export interface HealthStatus {
   status: string
   version: string
@@ -10,9 +8,14 @@ export interface HealthStatus {
 }
 
 export async function getHealthStatus(): Promise<HealthStatus> {
-  const response = await apiClient.get<HealthStatus>('/health')
-  if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to fetch health status')
+  const version = await window.go.main.App.GetVersion()
+  const environment = await window.go.main.App.GetEnvironment()
+  return {
+    status: 'healthy',
+    version,
+    environment,
+    database: 'SQLite',
+    uptime: '-',
+    go_version: '-',
   }
-  return response.data
 }

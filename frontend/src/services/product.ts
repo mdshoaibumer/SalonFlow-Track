@@ -1,15 +1,4 @@
-import { apiClient } from './api-client'
-import type {
-  Product,
-  CreateProductInput,
-  UpdateProductInput,
-  StockTransaction,
-  PurchaseEntry,
-  CreatePurchaseInput,
-  StockAdjustInput,
-  InventoryStats,
-  LowStockItem,
-} from '@/types'
+import type { Product, InventoryStats, CreateProductInput, UpdateProductInput, StockTransaction, PurchaseEntry, LowStockItem } from '@/types'
 
 export interface ListProductsParams {
   page?: number
@@ -20,127 +9,74 @@ export interface ListProductsParams {
   low_stock?: boolean
 }
 
-// --- Products ---
-
-export async function createProduct(input: CreateProductInput): Promise<Product> {
-  const response = await apiClient.post<Product>('/products', input)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to create product')
-  return response.data
+export interface ListProductsResponse {
+  products: Product[]
+  meta: { page: number; per_page: number; total: number; total_pages: number }
 }
 
-export async function listProducts(params: ListProductsParams = {}): Promise<{ products: Product[]; meta: { page: number; per_page: number; total: number; total_pages: number } }> {
-  const query = new URLSearchParams()
-  if (params.page) query.set('page', String(params.page))
-  if (params.per_page) query.set('per_page', String(params.per_page))
-  if (params.category) query.set('category', params.category)
-  if (params.status) query.set('status', params.status)
-  if (params.search) query.set('search', params.search)
-  if (params.low_stock) query.set('low_stock', 'true')
-
-  const response = await apiClient.get<Product[]>(`/products?${query.toString()}`)
-  if (!response.success) throw new Error(response.error?.message || 'Failed to fetch products')
+export async function listProducts(params: ListProductsParams = {}): Promise<ListProductsResponse> {
+  const result = await window.go.main.ProductService.ListProducts({
+    Category: params.category || '',
+    Status: params.status || '',
+    Search: params.search || '',
+    LowStock: params.low_stock || false,
+    Page: params.page || 1,
+    PerPage: params.per_page || 20,
+  })
   return {
-    products: response.data || [],
-    meta: {
-      page: response.meta?.page || 1,
-      per_page: response.meta?.per_page || 20,
-      total: response.meta?.total || 0,
-      total_pages: response.meta?.total_pages || 0,
-    },
+    products: result.products || [],
+    meta: { page: result.page, per_page: result.per_page, total: result.total, total_pages: result.total_pages },
   }
 }
 
 export async function getProductById(id: string): Promise<Product> {
-  const response = await apiClient.get<Product>(`/products/${id}`)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to fetch product')
-  return response.data
+  return window.go.main.ProductService.GetProduct(id)
+}
+
+export async function createProduct(input: CreateProductInput): Promise<Product> {
+  return window.go.main.ProductService.CreateProduct(input)
 }
 
 export async function updateProduct(id: string, input: UpdateProductInput): Promise<Product> {
-  const response = await apiClient.put<Product>(`/products/${id}`, input)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to update product')
-  return response.data
+  return window.go.main.ProductService.UpdateProduct(id, input)
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const response = await apiClient.delete(`/products/${id}`)
-  if (!response.success) throw new Error(response.error?.message || 'Failed to delete product')
+  await window.go.main.ProductService.DeleteProduct(id)
 }
 
-// --- Stock ---
-
-export async function adjustStock(input: StockAdjustInput): Promise<StockTransaction> {
-  const response = await apiClient.post<StockTransaction>('/products/stock/adjust', input)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to adjust stock')
-  return response.data
+export async function adjustStock(input: { product_id: string; transaction_type: string; quantity: number; notes: string }): Promise<StockTransaction> {
+  return window.go.main.ProductService.AdjustStock(input)
 }
 
-export async function listStockHistory(params: { product_id?: string; transaction_type?: string; date_from?: string; date_to?: string; page?: number; per_page?: number } = {}): Promise<{ transactions: StockTransaction[]; meta: { page: number; per_page: number; total: number; total_pages: number } }> {
-  const query = new URLSearchParams()
-  if (params.product_id) query.set('product_id', params.product_id)
-  if (params.transaction_type) query.set('transaction_type', params.transaction_type)
-  if (params.date_from) query.set('date_from', params.date_from)
-  if (params.date_to) query.set('date_to', params.date_to)
-  if (params.page) query.set('page', String(params.page))
-  if (params.per_page) query.set('per_page', String(params.per_page))
-
-  const response = await apiClient.get<StockTransaction[]>(`/products/stock/history?${query.toString()}`)
-  if (!response.success) throw new Error(response.error?.message || 'Failed to fetch stock history')
-  return {
-    transactions: response.data || [],
-    meta: {
-      page: response.meta?.page || 1,
-      per_page: response.meta?.per_page || 20,
-      total: response.meta?.total || 0,
-      total_pages: response.meta?.total_pages || 0,
-    },
-  }
+export async function listStockHistory(input: { product_id?: string; transaction_type?: string; date_from?: string; date_to?: string; page?: number; per_page?: number }) {
+  return window.go.main.ProductService.ListStockHistory({
+    ProductID: input.product_id || '',
+    TransactionType: input.transaction_type || '',
+    DateFrom: input.date_from || '',
+    DateTo: input.date_to || '',
+    Page: input.page || 1,
+    PerPage: input.per_page || 20,
+  })
 }
 
-// --- Purchases ---
-
-export async function createPurchase(input: CreatePurchaseInput): Promise<PurchaseEntry> {
-  const response = await apiClient.post<PurchaseEntry>('/products/purchases', input)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to create purchase')
-  return response.data
+export async function createPurchase(input: any): Promise<PurchaseEntry> {
+  return window.go.main.ProductService.CreatePurchase(input)
 }
 
-export async function listPurchases(params: { date_from?: string; date_to?: string; page?: number; per_page?: number } = {}): Promise<{ purchases: PurchaseEntry[]; meta: { page: number; per_page: number; total: number; total_pages: number } }> {
-  const query = new URLSearchParams()
-  if (params.date_from) query.set('date_from', params.date_from)
-  if (params.date_to) query.set('date_to', params.date_to)
-  if (params.page) query.set('page', String(params.page))
-  if (params.per_page) query.set('per_page', String(params.per_page))
-
-  const response = await apiClient.get<PurchaseEntry[]>(`/products/purchases?${query.toString()}`)
-  if (!response.success) throw new Error(response.error?.message || 'Failed to fetch purchases')
-  return {
-    purchases: response.data || [],
-    meta: {
-      page: response.meta?.page || 1,
-      per_page: response.meta?.per_page || 20,
-      total: response.meta?.total || 0,
-      total_pages: response.meta?.total_pages || 0,
-    },
-  }
+export async function listPurchases(input: { date_from?: string; date_to?: string; page?: number; per_page?: number } = {}) {
+  return window.go.main.ProductService.ListPurchases({
+    DateFrom: input.date_from || '',
+    DateTo: input.date_to || '',
+    Page: input.page || 1,
+    PerPage: input.per_page || 20,
+  })
 }
-
-export async function getPurchaseById(id: string): Promise<PurchaseEntry> {
-  const response = await apiClient.get<PurchaseEntry>(`/products/purchases/${id}`)
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to fetch purchase')
-  return response.data
-}
-
-// --- Reporting ---
 
 export async function getInventoryStats(): Promise<InventoryStats> {
-  const response = await apiClient.get<InventoryStats>('/products/stats')
-  if (!response.success || !response.data) throw new Error(response.error?.message || 'Failed to fetch inventory stats')
-  return response.data
+  return window.go.main.ProductService.GetInventoryStats()
 }
 
 export async function getLowStockProducts(): Promise<LowStockItem[]> {
-  const response = await apiClient.get<LowStockItem[]>('/products/low-stock')
-  if (!response.success) throw new Error(response.error?.message || 'Failed to fetch low stock')
-  return response.data || []
+  return window.go.main.ProductService.GetLowStockProducts()
 }
