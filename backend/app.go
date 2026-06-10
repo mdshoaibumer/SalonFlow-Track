@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
-	"net/http"
 
 	"github.com/salonflow/salonflow-track/internal/config"
 	"github.com/salonflow/salonflow-track/internal/database"
@@ -19,7 +17,6 @@ type App struct {
 	log       *slog.Logger
 	db        *database.DB
 	container *Container
-	server    *http.Server
 }
 
 // NewApp creates a new App instance with all backend services initialized.
@@ -53,57 +50,25 @@ func NewApp() (*App, error) {
 
 	container := NewContainer(cfg, log, db)
 
-	// Start HTTP API server immediately (before Wails window opens)
 	app := &App{
 		cfg:       cfg,
 		log:       log,
 		db:        db,
 		container: container,
 	}
-	app.startHTTPServer()
 
 	return app, nil
 }
 
-// startHTTPServer starts the HTTP API server on the configured port.
-func (a *App) startHTTPServer() {
-	a.server = a.container.HTTPServer()
-
-	// Find a free port if default is busy
-	listener, err := net.Listen("tcp", a.server.Addr)
-	if err != nil {
-		// Try any available port
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			a.log.Error("failed to start HTTP server", "error", err)
-			return
-		}
-	}
-
-	actualAddr := listener.Addr().String()
-	a.log.Info("API server listening", "addr", actualAddr)
-
-	go func() {
-		if err := a.server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			a.log.Error("HTTP server error", "error", err)
-		}
-	}()
-}
-
-// startup is called when the Wails app starts. It saves the context.
+// startup is called when the Wails app starts. It saves the context and propagates to all services.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.container.SetContext(ctx)
 }
 
 // shutdown is called when the Wails app is closing.
 func (a *App) shutdown(ctx context.Context) {
 	a.log.Info("shutting down desktop app...")
-
-	if a.server != nil {
-		if err := a.server.Shutdown(ctx); err != nil {
-			a.log.Error("server shutdown error", "error", err)
-		}
-	}
 
 	if a.db != nil {
 		if err := a.db.Close(); err != nil {
@@ -117,4 +82,9 @@ func (a *App) shutdown(ctx context.Context) {
 // GetVersion returns the application version (exposed to frontend via Wails bindings).
 func (a *App) GetVersion() string {
 	return version
+}
+
+// GetEnvironment returns the current environment.
+func (a *App) GetEnvironment() string {
+	return a.cfg.App.Environment
 }

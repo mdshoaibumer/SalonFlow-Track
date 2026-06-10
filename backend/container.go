@@ -1,19 +1,12 @@
 package main
 
 import (
+	"context"
 	"log/slog"
-	"net"
-	"net/http"
-	"time"
-
-	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 
 	"github.com/salonflow/salonflow-track/internal/adapters/backup"
 	"github.com/salonflow/salonflow-track/internal/adapters/cloudbackup"
 	"github.com/salonflow/salonflow-track/internal/adapters/gst"
-	"github.com/salonflow/salonflow-track/internal/adapters/handler"
 	"github.com/salonflow/salonflow-track/internal/adapters/importer"
 	"github.com/salonflow/salonflow-track/internal/adapters/license"
 	"github.com/salonflow/salonflow-track/internal/adapters/printer"
@@ -23,7 +16,6 @@ import (
 	"github.com/salonflow/salonflow-track/internal/core/ports"
 	"github.com/salonflow/salonflow-track/internal/core/usecase"
 	"github.com/salonflow/salonflow-track/internal/database"
-	appmw "github.com/salonflow/salonflow-track/pkg/middleware"
 )
 
 // Container is the application's composition root.
@@ -83,6 +75,28 @@ type Container struct {
 	whatsappUC   *usecase.WhatsAppUseCase
 	membershipUC *usecase.MembershipUseCase
 	cloudUC      *usecase.CloudBackupUseCase
+
+	// Wails Binding Services
+	StaffSvc       *StaffService
+	CustomerSvc    *CustomerService
+	ServiceSvc     *ServiceService
+	InvoiceSvc     *InvoiceService
+	ExpenseSvc     *ExpenseService
+	ProductSvc     *ProductService
+	PerformanceSvc *PerformanceService
+	CommissionSvc  *CommissionService
+	SalarySvc      *SalaryService
+	AnalyticsSvc   *AnalyticsService
+	BackupSvc      *BackupService
+	LicenseSvc     *LicenseService
+	UpdateSvc      *UpdateService
+	ImportSvc      *ImportService
+	GSTSvc         *GSTService
+	PrinterSvc     *PrinterService
+	AppointmentSvc *AppointmentService
+	WhatsAppSvc    *WhatsAppService
+	MembershipSvc  *MembershipService
+	CloudBackupSvc *CloudBackupService
 }
 
 // NewContainer builds the full dependency graph.
@@ -94,6 +108,7 @@ func NewContainer(cfg *config.Config, log *slog.Logger, db *database.DB) *Contai
 	}
 	c.initRepositories()
 	c.initUseCases()
+	c.initBindings()
 	return c
 }
 
@@ -150,77 +165,75 @@ func (c *Container) initUseCases() {
 	c.cloudUC = usecase.NewCloudBackupUseCase(c.cloudRepo, c.cloudEngine, c.cfg.Database.Path, c.log)
 }
 
-// HTTPServer returns a configured *http.Server ready to listen.
-func (c *Container) HTTPServer() *http.Server {
-	r := chi.NewRouter()
+func (c *Container) initBindings() {
+	c.StaffSvc = NewStaffService(c.staffUC)
+	c.CustomerSvc = NewCustomerService(c.customerUC)
+	c.ServiceSvc = NewServiceService(c.serviceUC)
+	c.InvoiceSvc = NewInvoiceService(c.invoiceUC)
+	c.ExpenseSvc = NewExpenseService(c.expenseUC)
+	c.ProductSvc = NewProductService(c.productUC)
+	c.PerformanceSvc = NewPerformanceService(c.perfUC)
+	c.CommissionSvc = NewCommissionService(c.commissionUC)
+	c.SalarySvc = NewSalaryService(c.salaryUC)
+	c.AnalyticsSvc = NewAnalyticsService(c.analyticsUC)
+	c.BackupSvc = NewBackupService(c.backupUC)
+	c.LicenseSvc = NewLicenseService(c.licenseUC)
+	c.UpdateSvc = NewUpdateService(c.updateUC)
+	c.ImportSvc = NewImportService(c.importUC)
+	c.GSTSvc = NewGSTService(c.gstUC)
+	c.PrinterSvc = NewPrinterService(c.printerUC)
+	c.AppointmentSvc = NewAppointmentService(c.apptUC)
+	c.WhatsAppSvc = NewWhatsAppService(c.whatsappUC)
+	c.MembershipSvc = NewMembershipService(c.membershipUC)
+	c.CloudBackupSvc = NewCloudBackupService(c.cloudUC)
+}
 
-	// Middleware stack
-	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
-	r.Use(appmw.RequestLogger(c.log))
-	r.Use(chimw.Recoverer)
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:*", "http://wails.localhost:*", "http://wails.localhost", "wails://*", "null"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
+// SetContext propagates the Wails context to all binding services.
+func (c *Container) SetContext(ctx context.Context) {
+	c.StaffSvc.SetContext(ctx)
+	c.CustomerSvc.SetContext(ctx)
+	c.ServiceSvc.SetContext(ctx)
+	c.InvoiceSvc.SetContext(ctx)
+	c.ExpenseSvc.SetContext(ctx)
+	c.ProductSvc.SetContext(ctx)
+	c.PerformanceSvc.SetContext(ctx)
+	c.CommissionSvc.SetContext(ctx)
+	c.SalarySvc.SetContext(ctx)
+	c.AnalyticsSvc.SetContext(ctx)
+	c.BackupSvc.SetContext(ctx)
+	c.LicenseSvc.SetContext(ctx)
+	c.UpdateSvc.SetContext(ctx)
+	c.ImportSvc.SetContext(ctx)
+	c.GSTSvc.SetContext(ctx)
+	c.PrinterSvc.SetContext(ctx)
+	c.AppointmentSvc.SetContext(ctx)
+	c.WhatsAppSvc.SetContext(ctx)
+	c.MembershipSvc.SetContext(ctx)
+	c.CloudBackupSvc.SetContext(ctx)
+}
 
-	// Handlers
-	healthH := handler.NewHealthHandler(c.db, c.cfg, c.log)
-	staffH := handler.NewStaffHandler(c.staffUC)
-	serviceH := handler.NewServiceHandler(c.serviceUC)
-	customerH := handler.NewCustomerHandler(c.customerUC)
-	invoiceH := handler.NewInvoiceHandler(c.invoiceUC)
-	perfH := handler.NewPerformanceHandler(c.perfUC)
-	commissionH := handler.NewCommissionHandler(c.commissionUC)
-	salaryH := handler.NewSalaryHandler(c.salaryUC)
-	expenseH := handler.NewExpenseHandler(c.expenseUC)
-	productH := handler.NewProductHandler(c.productUC)
-	analyticsH := handler.NewAnalyticsHandler(c.analyticsUC)
-	backupH := handler.NewBackupHandler(c.backupUC)
-	licenseH := handler.NewLicenseHandler(c.licenseUC)
-	updateH := handler.NewUpdateHandler(c.updateUC)
-	importH := handler.NewImportHandler(c.importUC, c.importEngine.UploadDir())
-	gstH := handler.NewGSTHandler(c.gstUC)
-	printerH := handler.NewPrinterHandler(c.printerUC)
-	apptH := handler.NewAppointmentHandler(c.apptUC)
-	whatsappH := handler.NewWhatsAppHandler(c.whatsappUC)
-	membershipH := handler.NewMembershipHandler(c.membershipUC)
-	cloudH := handler.NewCloudBackupHandler(c.cloudUC)
-
-	// Routes
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/health", healthH.Check)
-		r.Mount("/staff", staffH.Routes())
-		r.Mount("/services", serviceH.Routes())
-		r.Mount("/customers", customerH.Routes())
-		r.Mount("/invoices", invoiceH.Routes())
-		r.Mount("/performance", perfH.Routes())
-		r.Mount("/commissions", commissionH.Routes())
-		r.Mount("/salary", salaryH.Routes())
-		r.Mount("/expenses", expenseH.Routes())
-		r.Mount("/products", productH.Routes())
-		r.Mount("/reports", analyticsH.Routes())
-		r.Mount("/backups", backupH.Routes())
-		r.Mount("/license", licenseH.Routes())
-		r.Mount("/update", updateH.Routes())
-		r.Mount("/import", importH.Routes())
-		r.Mount("/gst", gstH.Routes())
-		r.Mount("/print", printerH.Routes())
-		r.Mount("/appointments", apptH.Routes())
-		r.Mount("/whatsapp", whatsappH.Routes())
-		r.Mount("/memberships", membershipH.Routes())
-		r.Mount("/cloud-backup", cloudH.Routes())
-	})
-
-	addr := net.JoinHostPort(c.cfg.Server.Host, c.cfg.Server.Port)
-	return &http.Server{
-		Addr:         addr,
-		Handler:      r,
-		ReadTimeout:  time.Duration(c.cfg.Server.ReadTimeoutSec) * time.Second,
-		WriteTimeout: time.Duration(c.cfg.Server.WriteTimeoutSec) * time.Second,
-		IdleTimeout:  60 * time.Second,
+// Bindings returns all service structs to register with Wails.
+func (c *Container) Bindings() []interface{} {
+	return []interface{}{
+		c.StaffSvc,
+		c.CustomerSvc,
+		c.ServiceSvc,
+		c.InvoiceSvc,
+		c.ExpenseSvc,
+		c.ProductSvc,
+		c.PerformanceSvc,
+		c.CommissionSvc,
+		c.SalarySvc,
+		c.AnalyticsSvc,
+		c.BackupSvc,
+		c.LicenseSvc,
+		c.UpdateSvc,
+		c.ImportSvc,
+		c.GSTSvc,
+		c.PrinterSvc,
+		c.AppointmentSvc,
+		c.WhatsAppSvc,
+		c.MembershipSvc,
+		c.CloudBackupSvc,
 	}
 }

@@ -49,9 +49,7 @@ func run() error {
 		},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
-		Bind: []interface{}{
-			app,
-		},
+		Bind:       append([]interface{}{app}, app.container.Bindings()...),
 		Windows: &windows.Options{
 			WebviewIsTransparent:              false,
 			WindowIsTranslucent:               false,
