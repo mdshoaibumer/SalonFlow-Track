@@ -1,3 +1,8 @@
+-- Drop old tables from migration 012/014 if they exist (schema rebuilt here)
+DROP TABLE IF EXISTS salary_line_items;
+DROP TABLE IF EXISTS salaries;
+DROP TABLE IF EXISTS advances;
+
 -- Salary Cycles table
 CREATE TABLE IF NOT EXISTS salary_cycles (
     id TEXT PRIMARY KEY,

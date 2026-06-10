@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/salonflow/salonflow-track/internal/config"
 	"github.com/salonflow/salonflow-track/internal/database"
@@ -23,11 +26,30 @@ type App struct {
 func NewApp() (*App, error) {
 	configPath := resolveConfigPath()
 
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("load config: %w", err)
+	var cfg *config.Config
+	if configPath == "" {
+		// No external config file — use built-in production defaults
+		cfg = config.Default()
+	} else {
+		var err error
+		cfg, err = config.Load(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("load config: %w", err)
+		}
 	}
 	cfg.App.Version = version
+
+	// Resolve relative DB path to be next to the executable
+	// so the app works regardless of the user's working directory
+	if !filepath.IsAbs(cfg.Database.Path) && cfg.Database.Path != ":memory:" {
+		exe, _ := os.Executable()
+		cfg.Database.Path = filepath.Join(filepath.Dir(exe), cfg.Database.Path)
+	}
+	// Same for log file
+	if cfg.Log.FilePath != "" && !filepath.IsAbs(cfg.Log.FilePath) {
+		exe, _ := os.Executable()
+		cfg.Log.FilePath = filepath.Join(filepath.Dir(exe), cfg.Log.FilePath)
+	}
 
 	log := logger.New(cfg.Log)
 	log.Info("initializing SalonFlow Track desktop app",
@@ -39,7 +61,14 @@ func NewApp() (*App, error) {
 		return nil, fmt.Errorf("init database: %w", err)
 	}
 
-	applied, err := db.MigrateUp()
+	// Use embedded migrations (compiled into the binary)
+	migFS, err := fs.Sub(migrationsFS, "database/migrations")
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("embedded migrations: %w", err)
+	}
+
+	applied, err := db.MigrateUpFromFS(migFS)
 	if err != nil {
 		db.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)

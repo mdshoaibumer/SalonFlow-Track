@@ -76,5 +76,10 @@ func resolveConfigPath() string {
 	}
 	// Check next to executable
 	exe, _ := os.Executable()
-	return filepath.Join(filepath.Dir(exe), "config.yaml")
+	exeDir := filepath.Join(filepath.Dir(exe), "config.yaml")
+	if _, err := os.Stat(exeDir); err == nil {
+		return exeDir
+	}
+	// No config file found — will use built-in defaults
+	return ""
 }

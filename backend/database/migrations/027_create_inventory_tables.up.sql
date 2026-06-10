@@ -2,6 +2,10 @@
 -- Description: Create products, stock_transactions, purchase_entries, purchase_items tables
 -- Created: 2026-06-09
 
+-- Drop old tables from migration 015 if they exist (schema rebuilt here)
+DROP TABLE IF EXISTS stock_transactions;
+DROP TABLE IF EXISTS products;
+
 CREATE TABLE IF NOT EXISTS products (
     id             TEXT PRIMARY KEY,
     product_code   TEXT NOT NULL UNIQUE,

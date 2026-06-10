@@ -59,6 +59,15 @@ type LogConfig struct {
 	Compress   bool   `yaml:"compress"`
 }
 
+// Default returns a production-ready config with sensible defaults.
+// Used when no external config file is found (single-exe distribution).
+func Default() *Config {
+	cfg := &Config{}
+	cfg.App.Environment = "production"
+	cfg.setDefaults()
+	return cfg
+}
+
 // Load reads and validates configuration from a YAML file.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)

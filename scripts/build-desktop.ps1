@@ -22,6 +22,15 @@ if ($Clean) {
     exit 0
 }
 
+# Consolidate all migrations into backend/database/migrations/
+Write-Host "Consolidating migrations..." -ForegroundColor Yellow
+$RootMigrations = Join-Path $RootDir "database" "migrations"
+$BackendMigrations = Join-Path $BackendDir "database" "migrations"
+if (Test-Path $RootMigrations) {
+    Copy-Item (Join-Path $RootMigrations "*") $BackendMigrations -Force
+}
+Write-Host "Migrations consolidated: $((Get-ChildItem $BackendMigrations -Filter '*.sql').Count) SQL files" -ForegroundColor Green
+
 # Setup environment
 $env:CGO_ENABLED = "1"
 $env:GOARCH = "amd64"

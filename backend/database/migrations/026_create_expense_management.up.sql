@@ -2,6 +2,10 @@
 -- Description: Create expense_categories and expenses tables for Phase 11
 -- Created: 2026-06-09
 
+-- Drop old tables from migration 011 if they exist (schema rebuilt here)
+DROP TABLE IF EXISTS expenses;
+DROP TABLE IF EXISTS expense_categories;
+
 CREATE TABLE IF NOT EXISTS expense_categories (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL UNIQUE,

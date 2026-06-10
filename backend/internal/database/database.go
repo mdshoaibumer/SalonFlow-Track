@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/salonflow/salonflow-track/internal/config"
@@ -90,6 +92,42 @@ func (db *DB) MigrateUp() (int, error) {
 	// Note: We intentionally do NOT call m.Close() here because golang-migrate's
 	// Close() also closes the underlying *sql.DB connection that we share with
 	// the rest of the application. The source (file reader) will be GC'd.
+
+	beforeVer, _, _ := m.Version()
+
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return 0, fmt.Errorf("migrate up: %w", err)
+	}
+
+	afterVer, _, _ := m.Version()
+	applied := int(afterVer) - int(beforeVer)
+	if applied < 0 {
+		applied = 0
+	}
+
+	return applied, nil
+}
+
+// MigrateUpFromFS applies all pending migrations from an embedded filesystem.
+// This is used for single-exe distribution where migrations are compiled into the binary.
+func (db *DB) MigrateUpFromFS(migrationFS fs.FS) (int, error) {
+	driver, err := sqlite3.WithInstance(db.conn, &sqlite3.Config{})
+	if err != nil {
+		return 0, fmt.Errorf("create migrate driver: %w", err)
+	}
+
+	sourceDriver, err := iofs.New(migrationFS, ".")
+	if err != nil {
+		return 0, fmt.Errorf("create iofs source: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", sourceDriver, "sqlite3", driver)
+	if err != nil {
+		return 0, fmt.Errorf("create migrator: %w", err)
+	}
+
+	m.Log = &migrateLogger{log: db.log}
 
 	beforeVer, _, _ := m.Version()
 
