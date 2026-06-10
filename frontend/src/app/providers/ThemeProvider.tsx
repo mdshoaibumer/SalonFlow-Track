@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = 'dark' | 'light' | 'system'
+type Theme = 'light'
 
 interface ThemeProviderState {
   theme: Theme
@@ -8,7 +8,7 @@ interface ThemeProviderState {
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>({
-  theme: 'system',
+  theme: 'light',
   setTheme: () => null,
 })
 
@@ -20,33 +20,21 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({
   children,
-  defaultTheme = 'system',
-  storageKey = 'salonflow-theme',
+  defaultTheme: _defaultTheme = 'light',
+  storageKey: _storageKey = 'salonflow-theme',
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
+  const [theme] = useState<Theme>('light')
 
   useEffect(() => {
     const root = window.document.documentElement
     root.classList.remove('light', 'dark')
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      root.classList.add(systemTheme)
-      return
-    }
-
-    root.classList.add(theme)
+    root.classList.add('light')
   }, [theme])
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
+    setTheme: (_theme: Theme) => {
+      // Light theme only - no theme switching
     },
   }
 
@@ -58,9 +46,5 @@ export function ThemeProvider({
 }
 
 export const useTheme = () => {
-  const context = useContext(ThemeProviderContext)
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider')
-  }
-  return context
+  return useContext(ThemeProviderContext)
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { PageHeader } from './PageHeader'
+import { PageHeader, PageHeaderAction } from './PageHeader'
 import { Button } from '@/components/ui/button'
 
 describe('PageHeader', () => {
@@ -32,5 +32,24 @@ describe('PageHeader', () => {
     const paragraphs = screen.queryAllByRole('paragraph')
     // No p element with muted class
     expect(screen.queryByText('undefined')).not.toBeInTheDocument()
+  })
+})
+
+describe('PageHeaderAction', () => {
+  it('renders button with label and calls onClick', async () => {
+    const user = userEvent.setup()
+    const onClick = vi.fn()
+    render(<PageHeaderAction label="Add Staff" onClick={onClick} />)
+    const btn = screen.getByRole('button', { name: 'Add Staff' })
+    expect(btn).toBeInTheDocument()
+    await user.click(btn)
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders with icon and variant', () => {
+    const onClick = vi.fn()
+    render(<PageHeaderAction label="Delete" icon={<span data-testid="icon">X</span>} onClick={onClick} variant="destructive" />)
+    expect(screen.getByTestId('icon')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Delete/ })).toBeInTheDocument()
   })
 })

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/test-utils'
 import { Header } from './Header'
 
@@ -39,21 +38,10 @@ describe('Header', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
-  it('renders theme toggle button', () => {
+  it('renders light theme button', () => {
     window.history.pushState({}, '', '/')
     renderWithProviders(<Header />)
-    expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument()
-  })
-
-  it('cycles theme on toggle click', async () => {
-    const user = userEvent.setup()
-    window.history.pushState({}, '', '/')
-    renderWithProviders(<Header />)
-    const btn = screen.getByRole('button', { name: /toggle theme/i })
-    // Default is light, clicking should cycle to system
-    await user.click(btn)
-    // After click, theme should change (button still exists)
-    expect(btn).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /light theme/i })).toBeInTheDocument()
   })
 
   it('renders fallback title for unknown routes', () => {

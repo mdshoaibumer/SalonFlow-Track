@@ -1,5 +1,4 @@
-import { Moon, Sun, Monitor } from 'lucide-react'
-import { useTheme } from '@/app/providers/ThemeProvider'
+import { Sun } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
@@ -27,14 +26,7 @@ const routeTitles: Record<string, string> = {
 }
 
 export function Header() {
-  const { theme, setTheme } = useTheme()
   const location = useLocation()
-
-  const toggleTheme = () => {
-    if (theme === 'dark') setTheme('light')
-    else if (theme === 'light') setTheme('system')
-    else setTheme('dark')
-  }
 
   const title = routeTitles[location.pathname] || 'SalonFlow Track'
 
@@ -48,17 +40,10 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={toggleTheme}
           className="h-8 w-8"
-          aria-label="Toggle theme"
+          aria-label="Light theme"
         >
-          {theme === 'dark' ? (
-            <Sun className="h-4 w-4" />
-          ) : theme === 'light' ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Monitor className="h-4 w-4" />
-          )}
+          <Sun className="h-4 w-4" />
         </Button>
       </div>
     </header>

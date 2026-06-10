@@ -16,7 +16,7 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="salonflow-theme">
+      <ThemeProvider defaultTheme="light" storageKey="salonflow-theme">
         <BrowserRouter>
           <AppRouter />
         </BrowserRouter>

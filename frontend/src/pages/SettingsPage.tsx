@@ -87,7 +87,7 @@ export function SettingsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Theme</label>
-                    <Select value={theme} onValueChange={(v: 'light' | 'dark' | 'system') => setTheme(v)}>
+                    <Select value={theme} onValueChange={(_v: string) => setTheme('light' as const)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

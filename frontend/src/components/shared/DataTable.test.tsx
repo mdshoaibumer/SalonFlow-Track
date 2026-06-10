@@ -185,4 +185,96 @@ describe('DataTable', () => {
     // Data should still render (sorting applied)
     expect(screen.getByText('Alice')).toBeInTheDocument()
   })
+
+  it('supports client-side search filtering (globalFilter)', async () => {
+    const user = userEvent.setup()
+    render(<DataTable columns={columns} data={testData} searchPlaceholder="Search..." searchKey="name" />)
+    const input = screen.getByPlaceholderText('Search...')
+    await user.type(input, 'Alice')
+    expect(screen.getByText('Alice')).toBeInTheDocument()
+  })
+
+  it('clicking last page button calls onPageChange with pageCount', async () => {
+    const user = userEvent.setup()
+    const onPageChange = vi.fn()
+    render(
+      <DataTable
+        columns={columns}
+        data={testData}
+        page={2}
+        pageCount={5}
+        onPageChange={onPageChange}
+      />
+    )
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    // buttons: [first, prev, next, last]
+    await user.click(buttons[3]) // Last page
+    expect(onPageChange).toHaveBeenCalledWith(5)
+  })
+
+  it('clicking first page button calls onPageChange with 1', async () => {
+    const user = userEvent.setup()
+    const onPageChange = vi.fn()
+    render(
+      <DataTable
+        columns={columns}
+        data={testData}
+        page={3}
+        pageCount={5}
+        onPageChange={onPageChange}
+      />
+    )
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    await user.click(buttons[0]) // First page
+    expect(onPageChange).toHaveBeenCalledWith(1)
+  })
+
+  it('clicking prev page button calls onPageChange with page-1', async () => {
+    const user = userEvent.setup()
+    const onPageChange = vi.fn()
+    render(
+      <DataTable
+        columns={columns}
+        data={testData}
+        page={3}
+        pageCount={5}
+        onPageChange={onPageChange}
+      />
+    )
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    await user.click(buttons[1]) // Prev
+    expect(onPageChange).toHaveBeenCalledWith(2)
+  })
+
+  it('handles server search with undefined searchValue (uses empty string fallback)', () => {
+    const onSearchChange = vi.fn()
+    render(
+      <DataTable
+        columns={columns}
+        data={testData}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Search..."
+      />
+    )
+    // searchValue is undefined, so ?? '' should be used
+    const input = screen.getByPlaceholderText('Search...')
+    expect(input).toHaveValue('')
+  })
+
+  it('renders placeholder headers correctly', () => {
+    const groupedColumns: ColumnDef<TestRow, unknown>[] = [
+      {
+        id: 'group',
+        header: 'Group',
+        columns: [
+          { accessorKey: 'id', header: 'ID' },
+          { accessorKey: 'name', header: 'Name' },
+        ],
+      },
+      { accessorKey: 'status', header: 'Status' },
+    ]
+    render(<DataTable columns={groupedColumns} data={testData} />)
+    expect(screen.getByText('ID')).toBeInTheDocument()
+    expect(screen.getByText('Name')).toBeInTheDocument()
+  })
 })
