@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -65,7 +67,43 @@
   * {
     @apply border-border;
   }
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
     @apply bg-background text-foreground;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+/* 8px spacing utilities */
+@layer utilities {
+  .gap-1x { gap: 8px; }
+  .gap-2x { gap: 16px; }
+  .gap-3x { gap: 24px; }
+  .gap-4x { gap: 32px; }
+  .gap-5x { gap: 40px; }
+  .gap-6x { gap: 48px; }
+}
+
+/* Scrollbar styling for desktop */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
 }

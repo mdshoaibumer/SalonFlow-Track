@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -8,25 +7,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { IndianRupee, Receipt, TrendingUp, Plus } from 'lucide-react'
 import { useInvoiceList, useInvoiceStats } from '@/hooks/useInvoices'
-import { IndianRupee, Receipt, TrendingUp } from 'lucide-react'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { KPICard } from '@/components/shared/KPICard'
+import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorState } from '@/components/shared/ErrorState'
+import type { Invoice } from '@/types'
 
 export function InvoicesPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
 
-  const { data, isLoading, error } = useInvoiceList({
+  const { data, isLoading, error, refetch } = useInvoiceList({
     page,
     per_page: 20,
     search: search || undefined,
@@ -35,51 +33,116 @@ export function InvoicesPage() {
 
   const { data: stats } = useInvoiceStats()
 
+  const handleExport = () => {
+    if (!data?.invoices) return
+    const csv = [
+      ['Invoice #', 'Date', 'Subtotal', 'Discount', 'Grand Total', 'Payment Method', 'Status'].join(','),
+      ...data.invoices.map((inv) =>
+        [inv.invoice_number, inv.invoice_date, inv.subtotal, inv.discount, inv.grand_total, inv.payment_method, inv.payment_status].join(',')
+      ),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `invoices-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const columns: ColumnDef<Invoice, unknown>[] = [
+    {
+      accessorKey: 'invoice_number',
+      header: 'Invoice #',
+      cell: ({ row }) => <span className="font-mono text-xs font-medium">{row.original.invoice_number}</span>,
+    },
+    {
+      accessorKey: 'invoice_date',
+      header: 'Date',
+      cell: ({ row }) => new Date(row.original.invoice_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+    },
+    {
+      accessorKey: 'subtotal',
+      header: 'Subtotal',
+      cell: ({ row }) => `₹${row.original.subtotal.toLocaleString('en-IN')}`,
+    },
+    {
+      accessorKey: 'discount',
+      header: 'Discount',
+      cell: ({ row }) => row.original.discount > 0 ? `₹${row.original.discount.toLocaleString('en-IN')}` : '-',
+    },
+    {
+      accessorKey: 'grand_total',
+      header: 'Total',
+      cell: ({ row }) => <span className="font-medium">₹{row.original.grand_total.toLocaleString('en-IN')}</span>,
+    },
+    {
+      accessorKey: 'payment_method',
+      header: 'Payment',
+      cell: ({ row }) => <span className="capitalize">{row.original.payment_method || '—'}</span>,
+    },
+    {
+      accessorKey: 'payment_status',
+      header: 'Status',
+      cell: ({ row }) => {
+        const s = row.original.payment_status
+        return (
+          <Badge variant={s === 'paid' ? 'default' : s === 'partial' ? 'secondary' : 'outline'}>
+            {s}
+          </Badge>
+        )
+      },
+    },
+  ]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Invoices" description="View and manage billing invoices" />
+        <LoadingState variant="page" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Invoices" description="View and manage billing invoices" />
+        <ErrorState
+          title="Failed to load invoices"
+          message="Please ensure the backend is running and try again."
+          onRetry={() => refetch()}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-        <p className="text-muted-foreground">View and manage billing invoices</p>
-      </div>
+      <PageHeader
+        title="Invoices"
+        description="View and manage billing invoices"
+        actions={
+          <Button onClick={() => navigate('/billing')} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            New Invoice
+          </Button>
+        }
+      />
 
+      {/* KPIs */}
       {stats && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <IndianRupee className="h-4 w-4" />
-              Today's Revenue
-            </div>
-            <p className="text-2xl font-bold mt-1">₹{stats.today_revenue.toLocaleString('en-IN')}</p>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Receipt className="h-4 w-4" />
-              Today's Invoices
-            </div>
-            <p className="text-2xl font-bold mt-1">{stats.today_invoices}</p>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <TrendingUp className="h-4 w-4" />
-              Avg Bill Value
-            </div>
-            <p className="text-2xl font-bold mt-1">₹{Math.round(stats.avg_bill_value).toLocaleString('en-IN')}</p>
-          </div>
+        <div className="grid gap-4 grid-cols-3">
+          <KPICard title="Today's Revenue" value={`₹${stats.today_revenue.toLocaleString('en-IN')}`} icon={IndianRupee} />
+          <KPICard title="Today's Invoices" value={stats.today_invoices} icon={Receipt} />
+          <KPICard title="Avg Bill Value" value={`₹${Math.round(stats.avg_bill_value).toLocaleString('en-IN')}`} icon={TrendingUp} />
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by invoice number..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-[140px]">
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter || 'all'} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
+          <SelectTrigger className="w-[140px] h-9">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -91,70 +154,22 @@ export function InvoicesPage() {
         </Select>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">Failed to load invoices. Is the backend running?</p>
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <p className="text-muted-foreground">Loading invoices...</p>
-        </div>
-      ) : data && data.invoices.length === 0 ? (
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <p className="text-muted-foreground">No invoices found. Create invoices from the Billing page.</p>
-        </div>
-      ) : data && (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Subtotal</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Grand Total</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.invoices.map((inv) => (
-                <TableRow key={inv.id}>
-                  <TableCell className="font-mono text-xs">{inv.invoice_number}</TableCell>
-                  <TableCell>{new Date(inv.invoice_date).toLocaleDateString('en-IN')}</TableCell>
-                  <TableCell className="text-right">₹{inv.subtotal.toLocaleString('en-IN')}</TableCell>
-                  <TableCell className="text-right">₹{inv.discount.toLocaleString('en-IN')}</TableCell>
-                  <TableCell className="text-right font-medium">₹{inv.grand_total.toLocaleString('en-IN')}</TableCell>
-                  <TableCell className="capitalize">{inv.payment_method || '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant={inv.payment_status === 'paid' ? 'default' : inv.payment_status === 'partial' ? 'secondary' : 'outline'}>
-                      {inv.payment_status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {data && data.meta.total_pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {data.meta.page} of {data.meta.total_pages} ({data.meta.total} total)
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= data.meta.total_pages} onClick={() => setPage(page + 1)}>
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Data Table */}
+      <DataTable
+        columns={columns}
+        data={data?.invoices || []}
+        searchPlaceholder="Search by invoice number..."
+        onSearchChange={(v) => { setSearch(v); setPage(1) }}
+        searchValue={search}
+        pageCount={data?.meta?.total_pages || 1}
+        page={page}
+        onPageChange={setPage}
+        emptyTitle="No invoices yet"
+        emptyDescription="Create invoices from the Billing page."
+        emptyAction={{ label: 'Create Invoice', onClick: () => navigate('/billing') }}
+        onExport={handleExport}
+        exportLabel="Export CSV"
+      />
     </div>
   )
 }

@@ -290,7 +290,7 @@ export function ImportPage() {
               ) : !jobsData?.jobs?.length ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No imports yet.</td></tr>
               ) : (
-                jobsData.jobs.map((job) => (
+                jobsData.jobs.map((job: any) => (
                   <tr key={job.id} className="border-b last:border-0">
                     <td className="px-4 py-3 font-medium">{job.file_name}</td>
                     <td className="px-4 py-3 capitalize">{job.target_entity}</td>

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -8,13 +7,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Search } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Scissors, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useServiceList, useCreateService, useUpdateService, useDeleteService } from '@/hooks/useServices'
-import { ServiceTable } from '@/components/services/ServiceTable'
 import { ServiceFormDialog } from '@/components/services/ServiceFormDialog'
 import { DeleteServiceDialog } from '@/components/services/DeleteServiceDialog'
-import { ServiceStatsWidget } from '@/components/services/ServiceStatsWidget'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { KPICard } from '@/components/shared/KPICard'
+import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorState } from '@/components/shared/ErrorState'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type { Service, CreateServiceInput, UpdateServiceInput } from '@/types'
+
+const categoryLabels: Record<string, string> = {
+  hair: 'Hair',
+  facial: 'Facial',
+  skin: 'Skin',
+  spa: 'Spa',
+  massage: 'Massage',
+  coloring: 'Coloring',
+  treatment: 'Treatment',
+  other: 'Other',
+}
 
 export function ServicesPage() {
   const [search, setSearch] = useState('')
@@ -25,7 +45,7 @@ export function ServicesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
-  const { data, isLoading, error } = useServiceList({
+  const { data, isLoading, error, refetch } = useServiceList({
     page,
     per_page: 20,
     search: search || undefined,
@@ -73,32 +93,144 @@ export function ServicesPage() {
     }
   }
 
+  const handleExport = () => {
+    if (!data?.services) return
+    const csv = [
+      ['Code', 'Name', 'Category', 'Duration', 'Price', 'Commission', 'Status'].join(','),
+      ...data.services.map((s) =>
+        [s.service_code, s.name, s.category, `${s.duration_minutes}min`, s.price, `${s.commission_value}${s.commission_type === 'percentage' ? '%' : ''}`, s.status].join(',')
+      ),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `services-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const columns: ColumnDef<Service, unknown>[] = [
+    {
+      accessorKey: 'service_code',
+      header: 'Code',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.service_code}</span>,
+    },
+    {
+      accessorKey: 'name',
+      header: 'Service',
+      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    },
+    {
+      accessorKey: 'category',
+      header: 'Category',
+      cell: ({ row }) => (
+        <Badge variant="outline">{categoryLabels[row.original.category] || row.original.category}</Badge>
+      ),
+    },
+    {
+      accessorKey: 'duration_minutes',
+      header: 'Duration',
+      cell: ({ row }) => `${row.original.duration_minutes} min`,
+    },
+    {
+      accessorKey: 'price',
+      header: 'Price',
+      cell: ({ row }) => `₹${row.original.price.toLocaleString('en-IN')}`,
+    },
+    {
+      accessorKey: 'commission_value',
+      header: 'Commission',
+      cell: ({ row }) => {
+        const s = row.original
+        return s.commission_type === 'percentage' ? `${s.commission_value}%` : `₹${s.commission_value}`
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDelete(row.original)} className="text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Services" description="Manage your salon service offerings" />
+        <LoadingState variant="page" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Services" description="Manage your salon service offerings" />
+        <ErrorState
+          title="Failed to load services"
+          message="Please ensure the backend is running and try again."
+          onRetry={() => refetch()}
+        />
+      </div>
+    )
+  }
+
+  const services = data?.services || []
+  const activeCount = services.filter((s) => s.status === 'active').length
+  const avgPrice = services.length ? Math.round(services.reduce((sum, s) => sum + s.price, 0) / services.length) : 0
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Services</h1>
-          <p className="text-muted-foreground">Manage your salon service offerings</p>
-        </div>
-        <Button onClick={handleAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Add Service
-        </Button>
+      <PageHeader
+        title="Services"
+        description="Manage your salon service offerings"
+        actions={
+          <Button onClick={handleAdd} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Service
+          </Button>
+        }
+      />
+
+      {/* KPIs */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <KPICard title="Total Services" value={data?.meta?.total ?? services.length} icon={Scissors} />
+        <KPICard title="Active" value={activeCount} icon={Scissors} />
+        <KPICard title="Categories" value={new Set(services.map((s) => s.category)).size} icon={Scissors} />
+        <KPICard title="Avg Price" value={`₹${avgPrice.toLocaleString('en-IN')}`} icon={Scissors} />
       </div>
 
-      <ServiceStatsWidget />
-
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search services..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          />
-        </div>
-        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-[150px]">
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <Select value={categoryFilter || 'all'} onValueChange={(v) => { setCategoryFilter(v === 'all' ? '' : v); setPage(1) }}>
+          <SelectTrigger className="w-[150px] h-9">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -113,8 +245,8 @@ export function ServicesPage() {
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-[130px]">
+        <Select value={statusFilter || 'all'} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
+          <SelectTrigger className="w-[130px] h-9">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -125,35 +257,22 @@ export function ServicesPage() {
         </Select>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">Failed to load services. Is the backend running?</p>
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <p className="text-muted-foreground">Loading services...</p>
-        </div>
-      ) : (
-        data && <ServiceTable services={data.services} onEdit={handleEdit} onDelete={handleDelete} />
-      )}
-
-      {data && data.meta.total_pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {data.meta.page} of {data.meta.total_pages} ({data.meta.total} total)
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= data.meta.total_pages} onClick={() => setPage(page + 1)}>
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Data Table */}
+      <DataTable
+        columns={columns}
+        data={services}
+        searchPlaceholder="Search services..."
+        onSearchChange={(v) => { setSearch(v); setPage(1) }}
+        searchValue={search}
+        pageCount={data?.meta?.total_pages || 1}
+        page={page}
+        onPageChange={setPage}
+        emptyTitle="No services yet"
+        emptyDescription="Add your salon service offerings to get started."
+        emptyAction={{ label: 'Add Service', onClick: handleAdd }}
+        onExport={handleExport}
+        exportLabel="Export CSV"
+      />
 
       <ServiceFormDialog
         open={formOpen}

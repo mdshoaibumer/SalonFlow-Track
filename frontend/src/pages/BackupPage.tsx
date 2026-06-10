@@ -155,7 +155,7 @@ export function BackupPage() {
               ) : !backupData?.backups?.length ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No backups yet. Create your first backup above.</td></tr>
               ) : (
-                backupData.backups.map((b) => (
+                backupData.backups.map((b: any) => (
                   <tr key={b.id} className="border-b last:border-0">
                     <td className="px-4 py-3 font-medium">{b.backup_name}</td>
                     <td className="px-4 py-3 capitalize">{b.backup_type}</td>
@@ -225,7 +225,7 @@ export function BackupPage() {
               {!restoreData?.restores?.length ? (
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No restores performed yet.</td></tr>
               ) : (
-                restoreData.restores.map((r) => (
+                restoreData.restores.map((r: any) => (
                   <tr key={r.id} className="border-b last:border-0">
                     <td className="px-4 py-3 font-medium">{r.backup_name}</td>
                     <td className="px-4 py-3">{formatDate(r.restore_date)}</td>

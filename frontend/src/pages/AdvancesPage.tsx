@@ -1,131 +1,191 @@
 import { useState } from 'react'
 import { useAdvanceList, useCreateAdvance, useApproveAdvance, useRejectAdvance } from '@/hooks/useSalary'
 import { Plus, Check, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorState } from '@/components/shared/ErrorState'
 import type { CreateAdvanceInput } from '@/types'
 
+interface Advance {
+  id: string
+  staff_name: string
+  amount: number
+  advance_date: string
+  reason: string
+  recovered_amount: number
+  remaining_amount: number
+  status: string
+}
+
+const statusVariants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  pending: 'outline',
+  approved: 'secondary',
+  recovering: 'secondary',
+  recovered: 'default',
+  rejected: 'destructive',
+}
+
 export function AdvancesPage() {
-  const [showForm, setShowForm] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
-  const { data, isLoading } = useAdvanceList({ status: statusFilter || undefined })
+  const { data, isLoading, error, refetch } = useAdvanceList({ status: statusFilter || undefined })
   const createAdv = useCreateAdvance()
   const approveAdv = useApproveAdvance()
   const rejectAdv = useRejectAdvance()
 
   const handleCreate = (input: CreateAdvanceInput) => {
-    createAdv.mutate(input, { onSuccess: () => setShowForm(false) })
+    createAdv.mutate(input, { onSuccess: () => setFormOpen(false) })
+  }
+
+  const columns: ColumnDef<Advance, unknown>[] = [
+    {
+      accessorKey: 'staff_name',
+      header: 'Staff',
+      cell: ({ row }) => <span className="font-medium">{row.original.staff_name}</span>,
+    },
+    {
+      accessorKey: 'amount',
+      header: 'Amount',
+      cell: ({ row }) => `₹${row.original.amount.toLocaleString('en-IN')}`,
+    },
+    {
+      accessorKey: 'advance_date',
+      header: 'Date',
+      cell: ({ row }) => new Date(row.original.advance_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+    },
+    {
+      accessorKey: 'reason',
+      header: 'Reason',
+      cell: ({ row }) => row.original.reason || '—',
+    },
+    {
+      accessorKey: 'recovered_amount',
+      header: 'Recovered',
+      cell: ({ row }) => <span className="text-green-600">₹{row.original.recovered_amount.toLocaleString('en-IN')}</span>,
+    },
+    {
+      accessorKey: 'remaining_amount',
+      header: 'Remaining',
+      cell: ({ row }) => <span className="text-orange-600">₹{row.original.remaining_amount.toLocaleString('en-IN')}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={statusVariants[row.original.status] || 'outline'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) =>
+        row.original.status === 'pending' ? (
+          <div className="flex justify-end gap-1">
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={() => approveAdv.mutate(row.original.id)}>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600" onClick={() => rejectAdv.mutate(row.original.id)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : null,
+    },
+  ]
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Advance Management" description="Manage staff salary advances and recovery" />
+        <ErrorState title="Failed to load advances" onRetry={() => refetch()} />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Advance Management</h1>
-          <p className="text-muted-foreground">Manage staff salary advances and recovery</p>
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-md border px-3 py-2 text-sm"
-          >
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="recovering">Recovering</option>
-            <option value="recovered">Recovered</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" />
+      <PageHeader
+        title="Advance Management"
+        description="Manage staff salary advances and recovery"
+        actions={
+          <Button onClick={() => setFormOpen(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
             New Advance
-          </button>
-        </div>
+          </Button>
+        }
+      />
+
+      {/* Filter */}
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
+          <SelectTrigger className="w-[140px] h-9">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="recovering">Recovering</SelectItem>
+            <SelectItem value="recovered">Recovered</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {showForm && <AdvanceForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} isLoading={createAdv.isPending} />}
+      {/* Data Table */}
+      {isLoading ? (
+        <LoadingState variant="table" />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={data?.advances || []}
+          searchPlaceholder="Search staff..."
+          emptyTitle="No advances found"
+          emptyDescription="Create a new advance request to get started."
+          emptyAction={{ label: 'New Advance', onClick: () => setFormOpen(true) }}
+        />
+      )}
 
-      <div className="rounded-lg border bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Staff</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Reason</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Recovered</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Remaining</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={8} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
-              )}
-              {!isLoading && (!data?.advances || data.advances.length === 0) && (
-                <tr><td colSpan={8} className="px-6 py-8 text-center text-muted-foreground">No advances found</td></tr>
-              )}
-              {data?.advances?.map((adv) => (
-                <tr key={adv.id} className="border-t hover:bg-muted/50">
-                  <td className="px-6 py-4 text-sm font-medium">{adv.staff_name}</td>
-                  <td className="px-6 py-4 text-sm text-right">₹{adv.amount.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm">{adv.advance_date}</td>
-                  <td className="px-6 py-4 text-sm">{adv.reason}</td>
-                  <td className="px-6 py-4 text-sm text-right text-green-600">₹{adv.recovered_amount.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-right text-orange-600">₹{adv.remaining_amount.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <StatusBadge status={adv.status} />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    {adv.status === 'pending' && (
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => approveAdv.mutate(adv.id)}
-                          className="rounded bg-green-600 p-1 text-white hover:bg-green-700"
-                          title="Approve"
-                        >
-                          <Check className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={() => rejectAdv.mutate(adv.id)}
-                          className="rounded bg-red-600 p-1 text-white hover:bg-red-700"
-                          title="Reject"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Add Advance Dialog */}
+      <AddAdvanceDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSubmit={handleCreate}
+        isLoading={createAdv.isPending}
+      />
     </div>
   )
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    approved: 'bg-blue-100 text-blue-800',
-    recovering: 'bg-orange-100 text-orange-800',
-    recovered: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-  }
-  return (
-    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
-      {status}
-    </span>
-  )
-}
-
-function AdvanceForm({ onSubmit, onCancel, isLoading }: { onSubmit: (input: CreateAdvanceInput) => void; onCancel: () => void; isLoading: boolean }) {
+function AddAdvanceDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  isLoading,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onSubmit: (input: CreateAdvanceInput) => void
+  isLoading: boolean
+}) {
   const [form, setForm] = useState<CreateAdvanceInput>({
     staff_id: '',
     amount: 0,
@@ -139,58 +199,58 @@ function AdvanceForm({ onSubmit, onCancel, isLoading }: { onSubmit: (input: Crea
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border bg-card p-6 space-y-4">
-      <h3 className="text-lg font-semibold">New Advance Request</h3>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium">Staff ID</label>
-          <input
-            type="text"
-            value={form.staff_id}
-            onChange={(e) => setForm({ ...form, staff_id: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            placeholder="Staff UUID"
-            required
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Amount (₹)</label>
-          <input
-            type="number"
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            min={1}
-            required
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Date</label>
-          <input
-            type="date"
-            value={form.advance_date}
-            onChange={(e) => setForm({ ...form, advance_date: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            required
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Reason</label>
-          <input
-            type="text"
-            value={form.reason}
-            onChange={(e) => setForm({ ...form, reason: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            placeholder="Personal, Medical, etc."
-          />
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button type="submit" disabled={isLoading} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-          {isLoading ? 'Creating...' : 'Create Advance'}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-lg border px-4 py-2 text-sm font-medium">Cancel</button>
-      </div>
-    </form>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>New Advance Request</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Staff ID *</label>
+              <Input
+                value={form.staff_id}
+                onChange={(e) => setForm({ ...form, staff_id: e.target.value })}
+                placeholder="Staff UUID"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Amount (₹) *</label>
+              <Input
+                type="number"
+                value={form.amount || ''}
+                onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+                min={1}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date *</label>
+              <Input
+                type="date"
+                value={form.advance_date}
+                onChange={(e) => setForm({ ...form, advance_date: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Reason</label>
+              <Input
+                value={form.reason}
+                onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                placeholder="Personal, Medical..."
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={isLoading || !form.staff_id || !form.amount}>
+              {isLoading ? 'Creating...' : 'Create Advance'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

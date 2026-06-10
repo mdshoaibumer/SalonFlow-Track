@@ -134,7 +134,7 @@ function PrintHistoryTab() {
           </tr>
         </thead>
         <tbody>
-          {jobs.map(job => (
+          {jobs.map((job: any) => (
             <tr key={job.id} className="border-b">
               <td className="p-2 capitalize">{job.document_type}</td>
               <td className="p-2">{job.document_id}</td>

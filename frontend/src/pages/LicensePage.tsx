@@ -232,7 +232,7 @@ export function LicensePage() {
               {!eventsData?.events?.length ? (
                 <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">No events yet.</td></tr>
               ) : (
-                eventsData.events.map((ev) => (
+                eventsData.events.map((ev: any) => (
                   <tr key={ev.id} className="border-b last:border-0">
                     <td className="px-4 py-3 capitalize">{ev.event_type.replace('_', ' ')}</td>
                     <td className="px-4 py-3">{formatDate(ev.event_date)}</td>

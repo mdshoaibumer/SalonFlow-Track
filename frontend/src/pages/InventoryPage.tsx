@@ -112,7 +112,7 @@ export function InventoryPage() {
               {(!stockHistory?.transactions || stockHistory.transactions.length === 0) && (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No transactions yet</td></tr>
               )}
-              {stockHistory?.transactions?.map((t) => (
+              {stockHistory?.transactions?.map((t: any) => (
                 <tr key={t.id} className="border-t">
                   <td className="px-4 py-2 text-sm">{new Date(t.transaction_date).toLocaleDateString('en-IN')}</td>
                   <td className="px-4 py-2 text-sm font-medium">{t.product_id.slice(0, 8)}...</td>

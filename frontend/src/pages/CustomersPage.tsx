@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -8,12 +7,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Search } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, UserCircle, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useCustomerList, useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from '@/hooks/useCustomers'
-import { CustomerTable } from '@/components/customers/CustomerTable'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { DeleteCustomerDialog } from '@/components/customers/DeleteCustomerDialog'
-import { CustomerStatsWidget } from '@/components/customers/CustomerStatsWidget'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { KPICard } from '@/components/shared/KPICard'
+import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorState } from '@/components/shared/ErrorState'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type { Customer, CreateCustomerInput, UpdateCustomerInput } from '@/types'
 
 export function CustomersPage() {
@@ -24,7 +33,7 @@ export function CustomersPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
 
-  const { data, isLoading, error } = useCustomerList({
+  const { data, isLoading, error, refetch } = useCustomerList({
     page,
     per_page: 20,
     search: search || undefined,
@@ -71,33 +80,149 @@ export function CustomersPage() {
     }
   }
 
+  const handleExport = () => {
+    if (!data?.customers) return
+    const csv = [
+      ['Code', 'Name', 'Phone', 'Email', 'Visits', 'Total Spent', 'Status'].join(','),
+      ...data.customers.map((c) =>
+        [c.customer_code, c.full_name, c.phone, c.email, c.total_visits, c.total_spent, c.status].join(',')
+      ),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `customers-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const columns: ColumnDef<Customer, unknown>[] = [
+    {
+      accessorKey: 'customer_code',
+      header: 'Code',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.customer_code}</span>,
+    },
+    {
+      accessorKey: 'full_name',
+      header: 'Name',
+      cell: ({ row }) => <span className="font-medium">{row.original.full_name}</span>,
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+    },
+    {
+      accessorKey: 'total_visits',
+      header: 'Visits',
+    },
+    {
+      accessorKey: 'total_spent',
+      header: 'Total Spent',
+      cell: ({ row }) => `₹${row.original.total_spent.toLocaleString('en-IN')}`,
+    },
+    {
+      accessorKey: 'last_visit_date',
+      header: 'Last Visit',
+      cell: ({ row }) =>
+        row.original.last_visit_date
+          ? new Date(row.original.last_visit_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+          : '-',
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDelete(row.original)} className="text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Customers" description="Manage your customer database" />
+        <LoadingState variant="page" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Customers" description="Manage your customer database" />
+        <ErrorState
+          title="Failed to load customers"
+          message="Please ensure the backend is running and try again."
+          onRetry={() => refetch()}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground">Manage your customer database</p>
-        </div>
-        <Button onClick={handleAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Add Customer
-        </Button>
+      <PageHeader
+        title="Customers"
+        description="Manage your customer database"
+        actions={
+          <Button onClick={handleAdd} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Customer
+          </Button>
+        }
+      />
+
+      {/* KPI Stats */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <KPICard title="Total Customers" value={data?.meta?.total ?? 0} icon={UserCircle} />
+        <KPICard
+          title="Active"
+          value={data?.customers.filter(c => c.status === 'active').length ?? 0}
+          icon={UserCircle}
+        />
+        <KPICard
+          title="Total Revenue"
+          value={`₹${(data?.customers.reduce((sum, c) => sum + c.total_spent, 0) ?? 0).toLocaleString('en-IN')}`}
+          icon={UserCircle}
+        />
+        <KPICard
+          title="Avg Visits"
+          value={data?.customers.length ? Math.round(data.customers.reduce((sum, c) => sum + c.total_visits, 0) / data.customers.length) : 0}
+          icon={UserCircle}
+        />
       </div>
 
-      <CustomerStatsWidget />
-
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, phone, code..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="Status" />
+      {/* Filter */}
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter || 'all'} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
+          <SelectTrigger className="w-[140px] h-9">
+            <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -107,35 +232,22 @@ export function CustomersPage() {
         </Select>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">Failed to load customers. Is the backend running?</p>
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <p className="text-muted-foreground">Loading customers...</p>
-        </div>
-      ) : (
-        data && <CustomerTable customers={data.customers} onEdit={handleEdit} onDelete={handleDelete} />
-      )}
-
-      {data && data.meta.total_pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {data.meta.page} of {data.meta.total_pages} ({data.meta.total} total)
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm" disabled={page >= data.meta.total_pages} onClick={() => setPage(page + 1)}>
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Data Table */}
+      <DataTable
+        columns={columns}
+        data={data?.customers || []}
+        searchPlaceholder="Search by name, phone, or code..."
+        onSearchChange={(v) => { setSearch(v); setPage(1) }}
+        searchValue={search}
+        pageCount={data?.meta?.total_pages || 1}
+        page={page}
+        onPageChange={setPage}
+        emptyTitle="No customers yet"
+        emptyDescription="Start building your customer database."
+        emptyAction={{ label: 'Add Customer', onClick: handleAdd }}
+        onExport={handleExport}
+        exportLabel="Export CSV"
+      />
 
       <CustomerFormDialog
         open={formOpen}

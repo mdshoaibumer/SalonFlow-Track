@@ -1,8 +1,34 @@
 import { useState } from 'react'
 import { useSalaryList, useSalaryStats, useGenerateSalary, usePaySalary, useSalaryCycles } from '@/hooks/useSalary'
-import { IndianRupee, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Clock, CheckCircle, AlertCircle, Wallet } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { KPICard } from '@/components/shared/KPICard'
+import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorState } from '@/components/shared/ErrorState'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+interface SalaryRecord {
+  id: string
+  staff_name: string
+  base_salary: number
+  commission_amount: number
+  bonus_amount: number
+  advance_amount: number
+  deduction_amount: number
+  net_salary: number
+  payment_status: string
+}
 
 export function SalaryPage() {
   const now = new Date()
@@ -10,147 +36,172 @@ export function SalaryPage() {
   const [year, setYear] = useState(now.getFullYear())
 
   const { data: stats } = useSalaryStats()
-  const { data: records, isLoading } = useSalaryList(month, year)
+  const { data: records, isLoading, error, refetch } = useSalaryList(month, year)
   const { data: cycles } = useSalaryCycles(year)
   const generateSalary = useGenerateSalary()
   const paySalary = usePaySalary()
 
-  const currentCycle = cycles?.find(c => c.month === month && c.year === year)
+  const currentCycle = cycles?.find((c: { month: number; year: number }) => c.month === month && c.year === year)
 
   const handleGenerate = () => {
-    if (confirm(`Generate salary for ${MONTHS[month - 1]} ${year}?`)) {
-      generateSalary.mutate({ month, year })
-    }
+    generateSalary.mutate({ month, year })
   }
 
-  const handlePay = (id: string, name: string) => {
-    if (confirm(`Mark salary as paid for ${name}?`)) {
-      paySalary.mutate(id)
-    }
+  const handlePay = (id: string) => {
+    paySalary.mutate(id)
+  }
+
+  const handleExport = () => {
+    if (!records) return
+    const csv = [
+      ['Staff', 'Base Salary', 'Commission', 'Bonus', 'Advance', 'Deduction', 'Net Salary', 'Status'].join(','),
+      ...records.map((r: SalaryRecord) =>
+        [r.staff_name, r.base_salary, Math.round(r.commission_amount), r.bonus_amount, r.advance_amount, r.deduction_amount, Math.round(r.net_salary), r.payment_status].join(',')
+      ),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `salary-${MONTHS[month - 1]}-${year}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const columns: ColumnDef<SalaryRecord, unknown>[] = [
+    {
+      accessorKey: 'staff_name',
+      header: 'Staff',
+      cell: ({ row }) => <span className="font-medium">{row.original.staff_name}</span>,
+    },
+    {
+      accessorKey: 'base_salary',
+      header: 'Base Salary',
+      cell: ({ row }) => `₹${row.original.base_salary.toLocaleString('en-IN')}`,
+    },
+    {
+      accessorKey: 'commission_amount',
+      header: 'Commission',
+      cell: ({ row }) => `₹${Math.round(row.original.commission_amount).toLocaleString('en-IN')}`,
+    },
+    {
+      accessorKey: 'bonus_amount',
+      header: 'Bonus',
+      cell: ({ row }) => row.original.bonus_amount > 0 ? `₹${row.original.bonus_amount.toLocaleString('en-IN')}` : '-',
+    },
+    {
+      accessorKey: 'advance_amount',
+      header: 'Advance',
+      cell: ({ row }) => row.original.advance_amount > 0 ? <span className="text-orange-600">-₹{row.original.advance_amount.toLocaleString('en-IN')}</span> : '-',
+    },
+    {
+      accessorKey: 'deduction_amount',
+      header: 'Deduction',
+      cell: ({ row }) => row.original.deduction_amount > 0 ? <span className="text-red-600">-₹{row.original.deduction_amount.toLocaleString('en-IN')}</span> : '-',
+    },
+    {
+      accessorKey: 'net_salary',
+      header: 'Net Salary',
+      cell: ({ row }) => <span className="font-bold">₹{Math.round(row.original.net_salary).toLocaleString('en-IN')}</span>,
+    },
+    {
+      accessorKey: 'payment_status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.payment_status === 'paid' ? 'default' : 'secondary'}>
+          {row.original.payment_status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) =>
+        row.original.payment_status !== 'paid' ? (
+          <Button size="sm" variant="outline" onClick={() => handlePay(row.original.id)} className="text-green-700 border-green-300 hover:bg-green-50">
+            Mark Paid
+          </Button>
+        ) : null,
+    },
+  ]
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Salary Management" description="Generate and manage monthly payroll" />
+        <ErrorState title="Failed to load salary data" onRetry={() => refetch()} />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Salary Management</h1>
-          <p className="text-muted-foreground">Generate and manage monthly payroll</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="rounded-md border px-3 py-2 text-sm"
-          >
-            {MONTHS.map((m, i) => (
-              <option key={i} value={i + 1}>{m}</option>
-            ))}
-          </select>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="rounded-md border px-3 py-2 text-sm"
-          >
-            {[2024, 2025, 2026, 2027].map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          {!currentCycle && (
-            <button
-              onClick={handleGenerate}
-              disabled={generateSalary.isPending}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {generateSalary.isPending ? 'Generating...' : 'Generate Salary'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard title="Total Payroll" value={`₹${Math.round(stats?.total_payroll ?? 0).toLocaleString()}`} icon={<IndianRupee className="h-4 w-4" />} />
-        <StatCard title="Pending" value={String(stats?.pending_payments ?? 0)} icon={<Clock className="h-4 w-4" />} />
-        <StatCard title="Paid" value={String(stats?.paid_salaries ?? 0)} icon={<CheckCircle className="h-4 w-4" />} />
-        <StatCard title="Outstanding Advances" value={`₹${Math.round(stats?.outstanding_advances ?? 0).toLocaleString()}`} icon={<AlertCircle className="h-4 w-4" />} />
-      </div>
-
-      {/* Salary Table */}
-      <div className="rounded-lg border bg-card">
-        <div className="p-6">
-          <h3 className="text-lg font-semibold">
-            {MONTHS[month - 1]} {year} — Salary Register
-            {currentCycle && (
-              <span className={`ml-3 inline-flex rounded-full px-2 py-1 text-xs font-medium ${currentCycle.status === 'generated' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                {currentCycle.status}
-              </span>
+      <PageHeader
+        title="Salary Management"
+        description="Generate and manage monthly payroll"
+        actions={
+          <div className="flex items-center gap-2">
+            {!currentCycle && (
+              <Button onClick={handleGenerate} disabled={generateSalary.isPending} size="sm">
+                {generateSalary.isPending ? 'Generating...' : 'Generate Salary'}
+              </Button>
             )}
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-t bg-muted/50">
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Staff</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Base Salary</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Commission</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Bonus</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Advance</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Deduction</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Net Salary</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
-              )}
-              {!isLoading && (!records || records.length === 0) && (
-                <tr><td colSpan={9} className="px-6 py-8 text-center text-muted-foreground">No salary records. Generate salary to get started.</td></tr>
-              )}
-              {records?.map((rec) => (
-                <tr key={rec.id} className="border-t hover:bg-muted/50">
-                  <td className="px-6 py-4 text-sm font-medium">{rec.staff_name}</td>
-                  <td className="px-6 py-4 text-sm text-right">₹{rec.base_salary.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-right">₹{Math.round(rec.commission_amount).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-right">₹{rec.bonus_amount.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-right text-orange-600">-₹{rec.advance_amount.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-right text-red-600">-₹{rec.deduction_amount.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-right font-bold">₹{Math.round(rec.net_salary).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${rec.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                      {rec.payment_status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    {rec.payment_status !== 'paid' && (
-                      <button
-                        onClick={() => handlePay(rec.id, rec.staff_name)}
-                        className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
-                      >
-                        Pay
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
+          </div>
+        }
+      />
 
-function StatCard({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border bg-card p-6">
-      <div className="flex items-center gap-2 text-muted-foreground mb-2">
-        {icon}
-        <span className="text-sm font-medium">{title}</span>
+      {/* KPIs */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <KPICard title="Total Payroll" value={`₹${Math.round(stats?.total_payroll ?? 0).toLocaleString('en-IN')}`} icon={Wallet} />
+        <KPICard title="Pending" value={String(stats?.pending_payments ?? 0)} icon={Clock} />
+        <KPICard title="Paid" value={String(stats?.paid_salaries ?? 0)} icon={CheckCircle} />
+        <KPICard title="Outstanding Advances" value={`₹${Math.round(stats?.outstanding_advances ?? 0).toLocaleString('en-IN')}`} icon={AlertCircle} />
       </div>
-      <p className="text-2xl font-bold">{value}</p>
+
+      {/* Month/Year Selector */}
+      <div className="flex items-center gap-3">
+        <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
+          <SelectTrigger className="w-[140px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MONTHS.map((m, i) => (
+              <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+          <SelectTrigger className="w-[100px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[2024, 2025, 2026, 2027].map((y) => (
+              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {currentCycle && (
+          <Badge variant="outline" className="ml-2">
+            {currentCycle.status}
+          </Badge>
+        )}
+      </div>
+
+      {/* Data Table */}
+      {isLoading ? (
+        <LoadingState variant="table" />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={records || []}
+          searchPlaceholder="Search staff..."
+          emptyTitle="No salary records"
+          emptyDescription="Generate salary for this month to get started."
+          emptyAction={!currentCycle ? { label: 'Generate Salary', onClick: handleGenerate } : undefined}
+          onExport={records && records.length > 0 ? handleExport : undefined}
+          exportLabel="Export CSV"
+        />
+      )}
     </div>
   )
 }

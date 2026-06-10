@@ -47,7 +47,7 @@ export function PurchasesPage() {
               {!isLoading && (!data?.purchases || data.purchases.length === 0) && (
                 <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No purchases found</td></tr>
               )}
-              {data?.purchases?.map((p) => (
+              {data?.purchases?.map((p: any) => (
                 <tr key={p.id} className="border-t hover:bg-muted/50">
                   <td className="px-6 py-4 text-sm font-mono">{p.purchase_number}</td>
                   <td className="px-6 py-4 text-sm font-medium">{p.vendor_name}</td>

@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Search, Plus, Users } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -9,11 +8,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { StaffTable } from '@/components/staff/StaffTable'
+import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { KPICard } from '@/components/shared/KPICard'
+import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorState } from '@/components/shared/ErrorState'
 import { StaffFormDialog } from '@/components/staff/StaffFormDialog'
 import { DeleteStaffDialog } from '@/components/staff/DeleteStaffDialog'
-import { useStaffList, useCreateStaff, useUpdateStaff, useDeleteStaff } from '@/hooks/useStaff'
+import { useStaffList, useStaffStats, useCreateStaff, useUpdateStaff, useDeleteStaff } from '@/hooks/useStaff'
 import type { Staff, CreateStaffInput, UpdateStaffInput } from '@/types'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+
+const designationLabels: Record<string, string> = {
+  stylist: 'Stylist',
+  assistant: 'Assistant',
+  receptionist: 'Receptionist',
+  manager: 'Manager',
+}
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
 
 export function StaffPage() {
   const [page, setPage] = useState(1)
@@ -23,12 +44,13 @@ export function StaffPage() {
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
   const [deletingStaff, setDeletingStaff] = useState<Staff | null>(null)
 
-  const { data, isLoading, error } = useStaffList({
+  const { data, isLoading, error, refetch } = useStaffList({
     page,
     per_page: 20,
     search: search || undefined,
     status: statusFilter || undefined,
   })
+  const { data: stats } = useStaffStats()
 
   const createMutation = useCreateStaff()
   const updateMutation = useUpdateStaff()
@@ -68,43 +90,136 @@ export function StaffPage() {
     })
   }
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPage(1)
+  const handleExport = () => {
+    if (!data?.staff) return
+    const csv = [
+      ['Code', 'Name', 'Phone', 'Designation', 'Base Salary', 'Commission %', 'Status'].join(','),
+      ...data.staff.map((s) =>
+        [s.staff_code, s.full_name, s.phone, s.designation, s.base_salary, s.commission_percentage, s.status].join(',')
+      ),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `staff-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const totalPages = data?.meta?.total_pages || 1
+  const columns: ColumnDef<Staff, unknown>[] = [
+    {
+      accessorKey: 'staff_code',
+      header: 'Code',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.staff_code}</span>,
+    },
+    {
+      accessorKey: 'full_name',
+      header: 'Name',
+      cell: ({ row }) => <span className="font-medium">{row.original.full_name}</span>,
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+    },
+    {
+      accessorKey: 'designation',
+      header: 'Designation',
+      cell: ({ row }) => designationLabels[row.original.designation] || row.original.designation,
+    },
+    {
+      accessorKey: 'base_salary',
+      header: 'Salary',
+      cell: ({ row }) => formatCurrency(row.original.base_salary),
+    },
+    {
+      accessorKey: 'commission_percentage',
+      header: 'Comm %',
+      cell: ({ row }) => `${row.original.commission_percentage}%`,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDelete(row.original)} className="text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Staff" description="Manage your salon staff members" />
+        <LoadingState variant="page" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Staff" description="Manage your salon staff members" />
+        <ErrorState
+          title="Failed to load staff"
+          message="Please ensure the backend is running and try again."
+          onRetry={() => refetch()}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Staff</h1>
-          <p className="text-muted-foreground">
-            Manage your salon staff members
-          </p>
+      <PageHeader
+        title="Staff"
+        description="Manage your salon staff members"
+        actions={
+          <Button onClick={handleAdd} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Staff
+          </Button>
+        }
+      />
+
+      {/* Stats */}
+      {stats && (
+        <div className="grid gap-4 grid-cols-3">
+          <KPICard title="Total Staff" value={stats.total} icon={Users} />
+          <KPICard title="Active" value={stats.active} icon={Users} className="border-green-200 dark:border-green-800" />
+          <KPICard title="Inactive" value={stats.inactive} icon={Users} className="border-red-200 dark:border-red-800" />
         </div>
-        <Button onClick={handleAdd}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Staff
-        </Button>
-      </div>
+      )}
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, phone, or code..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </form>
-
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-[140px]">
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter || 'all'} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
+          <SelectTrigger className="w-[140px] h-9">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
@@ -115,67 +230,22 @@ export function StaffPage() {
         </Select>
       </div>
 
-      {/* Content */}
-      {isLoading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="text-muted-foreground">Loading staff...</div>
-        </div>
-      ) : error ? (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
-          <p className="text-destructive">
-            Failed to load staff. Please ensure the backend is running.
-          </p>
-        </div>
-      ) : (
-        <>
-          {data && data.staff.length === 0 && !search && !statusFilter ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold">No staff members yet</h3>
-              <p className="text-muted-foreground mt-1 mb-4">
-                Get started by adding your first staff member.
-              </p>
-              <Button onClick={handleAdd}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Staff
-              </Button>
-            </div>
-          ) : (
-            <StaffTable
-              staff={data?.staff || []}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Showing page {page} of {totalPages} ({data?.meta?.total || 0} total)
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      {/* Data Table */}
+      <DataTable
+        columns={columns}
+        data={data?.staff || []}
+        searchPlaceholder="Search by name, phone, or code..."
+        onSearchChange={(v) => { setSearch(v); setPage(1) }}
+        searchValue={search}
+        pageCount={data?.meta?.total_pages || 1}
+        page={page}
+        onPageChange={setPage}
+        emptyTitle="No staff members yet"
+        emptyDescription="Get started by adding your first staff member."
+        emptyAction={{ label: 'Add Staff', onClick: handleAdd }}
+        onExport={handleExport}
+        exportLabel="Export CSV"
+      />
 
       {/* Dialogs */}
       <StaffFormDialog

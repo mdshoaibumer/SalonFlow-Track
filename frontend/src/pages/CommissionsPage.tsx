@@ -101,7 +101,7 @@ export function CommissionsPage() {
               {!rulesLoading && (!rulesData?.rules || rulesData.rules.length === 0) && (
                 <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">No commission rules configured</td></tr>
               )}
-              {rulesData?.rules?.map((rule) => (
+              {rulesData?.rules?.map((rule: any) => (
                 <tr key={rule.id} className="border-t hover:bg-muted/50">
                   <td className="px-6 py-4 text-sm font-medium">{rule.rule_name}</td>
                   <td className="px-6 py-4 text-sm capitalize">{rule.rule_type.replace('_', ' ')}</td>

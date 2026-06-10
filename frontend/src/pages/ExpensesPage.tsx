@@ -1,7 +1,34 @@
 import { useState } from 'react'
 import { useExpenseList, useExpenseCategories, useCreateExpense, useDeleteExpense, useExpenseStats } from '@/hooks/useExpense'
-import { Plus, Trash2, IndianRupee, TrendingDown, TrendingUp, Percent } from 'lucide-react'
-import type { CreateExpenseInput, ExpensePaymentMethod } from '@/types'
+import { Plus, CreditCard, TrendingDown, TrendingUp, Percent, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { KPICard } from '@/components/shared/KPICard'
+import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
+import { LoadingState } from '@/components/shared/LoadingState'
+import { ErrorState } from '@/components/shared/ErrorState'
+import type { Expense, CreateExpenseInput, ExpensePaymentMethod } from '@/types'
 
 const PAYMENT_METHODS: { value: ExpensePaymentMethod; label: string }[] = [
   { value: 'cash', label: 'Cash' },
@@ -11,211 +38,229 @@ const PAYMENT_METHODS: { value: ExpensePaymentMethod; label: string }[] = [
   { value: 'cheque', label: 'Cheque' },
 ]
 
+const statusColors: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  pending: 'outline',
+  approved: 'secondary',
+  paid: 'default',
+  rejected: 'destructive',
+}
+
 export function ExpensesPage() {
-  const [showForm, setShowForm] = useState(false)
-  const [filters, setFilters] = useState({ category_id: '', status: '', payment_method: '', page: 1 })
+  const [formOpen, setFormOpen] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
 
   const { data: stats } = useExpenseStats()
   const { data: categories } = useExpenseCategories()
-  const { data, isLoading } = useExpenseList({ ...filters, per_page: 20 })
+  const { data, isLoading, error, refetch } = useExpenseList({
+    category_id: categoryFilter || undefined,
+    status: statusFilter || undefined,
+    page,
+    per_page: 20,
+  })
   const createExp = useCreateExpense()
   const deleteExp = useDeleteExpense()
 
-  const handleCreate = (input: CreateExpenseInput) => {
-    createExp.mutate(input, { onSuccess: () => setShowForm(false) })
+  const handleDelete = (id: string) => {
+    deleteExp.mutate(id)
   }
 
-  const handleDelete = (id: string, num: string) => {
-    if (confirm(`Delete expense ${num}?`)) {
-      deleteExp.mutate(id)
-    }
+  const handleExport = () => {
+    if (!data?.expenses) return
+    const csv = [
+      ['Expense #', 'Category', 'Amount', 'Date', 'Payment', 'Vendor', 'Status'].join(','),
+      ...data.expenses.map((e) =>
+        [e.expense_number, e.category_name, e.amount, e.expense_date, e.payment_method, e.vendor_name, e.status].join(',')
+      ),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `expenses-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const columns: ColumnDef<Expense, unknown>[] = [
+    {
+      accessorKey: 'expense_number',
+      header: 'Expense #',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.expense_number}</span>,
+    },
+    {
+      accessorKey: 'category_name',
+      header: 'Category',
+      cell: ({ row }) => <Badge variant="outline">{row.original.category_name}</Badge>,
+    },
+    {
+      accessorKey: 'amount',
+      header: 'Amount',
+      cell: ({ row }) => <span className="font-medium">₹{row.original.amount.toLocaleString('en-IN')}</span>,
+    },
+    {
+      accessorKey: 'expense_date',
+      header: 'Date',
+      cell: ({ row }) => new Date(row.original.expense_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+    },
+    {
+      accessorKey: 'payment_method',
+      header: 'Payment',
+      cell: ({ row }) => <span className="capitalize">{row.original.payment_method.replace('_', ' ')}</span>,
+    },
+    {
+      accessorKey: 'vendor_name',
+      header: 'Vendor',
+      cell: ({ row }) => row.original.vendor_name || '—',
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={statusColors[row.original.status] || 'outline'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleDelete(row.original.id)} className="text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ]
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Expenses" description="Track and manage all business expenses" />
+        <LoadingState variant="page" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Expenses" description="Track and manage all business expenses" />
+        <ErrorState
+          title="Failed to load expenses"
+          message="Please ensure the backend is running and try again."
+          onRetry={() => refetch()}
+        />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Expenses</h1>
-          <p className="text-muted-foreground">Track and manage all business expenses</p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Add Expense
-        </button>
-      </div>
+      <PageHeader
+        title="Expenses"
+        description="Track and manage all business expenses"
+        actions={
+          <Button onClick={() => setFormOpen(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Expense
+          </Button>
+        }
+      />
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard title="Today's Expenses" value={`₹${Math.round(stats?.today_expenses ?? 0).toLocaleString()}`} icon={<TrendingDown className="h-4 w-4 text-red-500" />} />
-        <StatCard title="Monthly Expenses" value={`₹${Math.round(stats?.monthly_expenses ?? 0).toLocaleString()}`} icon={<IndianRupee className="h-4 w-4" />} />
-        <StatCard title="Monthly Profit" value={`₹${Math.round(stats?.monthly_profit ?? 0).toLocaleString()}`} icon={<TrendingUp className="h-4 w-4 text-green-500" />} />
-        <StatCard title="Profit Margin" value={`${(stats?.profit_margin ?? 0).toFixed(1)}%`} icon={<Percent className="h-4 w-4" />} />
+      {/* KPIs */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <KPICard title="Today's Expenses" value={`₹${Math.round(stats?.today_expenses ?? 0).toLocaleString('en-IN')}`} icon={TrendingDown} />
+        <KPICard title="Monthly Expenses" value={`₹${Math.round(stats?.monthly_expenses ?? 0).toLocaleString('en-IN')}`} icon={CreditCard} />
+        <KPICard title="Monthly Profit" value={`₹${Math.round(stats?.monthly_profit ?? 0).toLocaleString('en-IN')}`} icon={TrendingUp} />
+        <KPICard title="Profit Margin" value={`${(stats?.profit_margin ?? 0).toFixed(1)}%`} icon={Percent} />
       </div>
-
-      {/* Add Expense Form */}
-      {showForm && (
-        <ExpenseForm
-          categories={categories || []}
-          onSubmit={handleCreate}
-          onCancel={() => setShowForm(false)}
-          isLoading={createExp.isPending}
-        />
-      )}
 
       {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        <select
-          value={filters.category_id}
-          onChange={(e) => setFilters({ ...filters, category_id: e.target.value, page: 1 })}
-          className="rounded-md border px-3 py-2 text-sm"
-        >
-          <option value="">All Categories</option>
-          {categories?.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
-          className="rounded-md border px-3 py-2 text-sm"
-        >
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="paid">Paid</option>
-          <option value="rejected">Rejected</option>
-        </select>
-        <select
-          value={filters.payment_method}
-          onChange={(e) => setFilters({ ...filters, payment_method: e.target.value, page: 1 })}
-          className="rounded-md border px-3 py-2 text-sm"
-        >
-          <option value="">All Methods</option>
-          {PAYMENT_METHODS.map((m) => (
-            <option key={m.value} value={m.value}>{m.label}</option>
-          ))}
-        </select>
+      <div className="flex items-center gap-3">
+        <Select value={categoryFilter || 'all'} onValueChange={(v) => { setCategoryFilter(v === 'all' ? '' : v); setPage(1) }}>
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories?.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter || 'all'} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}>
+          <SelectTrigger className="w-[130px] h-9">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Expense Table */}
-      <div className="rounded-lg border bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Expense #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Category</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Payment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Vendor</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase text-muted-foreground">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={8} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
-              )}
-              {!isLoading && (!data?.expenses || data.expenses.length === 0) && (
-                <tr><td colSpan={8} className="px-6 py-8 text-center text-muted-foreground">No expenses found</td></tr>
-              )}
-              {data?.expenses?.map((exp) => (
-                <tr key={exp.id} className="border-t hover:bg-muted/50">
-                  <td className="px-6 py-4 text-sm font-mono">{exp.expense_number}</td>
-                  <td className="px-6 py-4 text-sm">{exp.category_name}</td>
-                  <td className="px-6 py-4 text-sm text-right font-medium">₹{exp.amount.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm">{exp.expense_date}</td>
-                  <td className="px-6 py-4 text-sm capitalize">{exp.payment_method.replace('_', ' ')}</td>
-                  <td className="px-6 py-4 text-sm">{exp.vendor_name || '—'}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <StatusBadge status={exp.status} />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleDelete(exp.id, exp.expense_number)}
-                      className="rounded p-1 text-red-600 hover:bg-red-50"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* Pagination */}
-        {data && data.meta.total_pages > 1 && (
-          <div className="flex items-center justify-between border-t px-6 py-3">
-            <span className="text-sm text-muted-foreground">
-              Page {data.meta.page} of {data.meta.total_pages} ({data.meta.total} total)
-            </span>
-            <div className="flex gap-2">
-              <button
-                disabled={filters.page <= 1}
-                onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                disabled={filters.page >= data.meta.total_pages}
-                onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Data Table */}
+      <DataTable
+        columns={columns}
+        data={data?.expenses || []}
+        searchPlaceholder="Search expenses..."
+        onSearchChange={(v) => { setSearch(v); setPage(1) }}
+        searchValue={search}
+        pageCount={data?.meta?.total_pages || 1}
+        page={page}
+        onPageChange={setPage}
+        emptyTitle="No expenses recorded"
+        emptyDescription="Start tracking your business expenses."
+        emptyAction={{ label: 'Add Expense', onClick: () => setFormOpen(true) }}
+        onExport={handleExport}
+        exportLabel="Export CSV"
+      />
+
+      {/* Add Expense Dialog */}
+      <AddExpenseDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        categories={categories || []}
+        onSubmit={(input) => {
+          createExp.mutate(input, { onSuccess: () => setFormOpen(false) })
+        }}
+        isLoading={createExp.isPending}
+      />
     </div>
   )
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    approved: 'bg-blue-100 text-blue-800',
-    paid: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-  }
-  return (
-    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
-      {status}
-    </span>
-  )
-}
-
-function StatCard({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border bg-card p-6">
-      <div className="flex items-center gap-2 text-muted-foreground mb-2">
-        {icon}
-        <span className="text-sm font-medium">{title}</span>
-      </div>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
-  )
-}
-
-function ExpenseForm({
+function AddExpenseDialog({
+  open,
+  onOpenChange,
   categories,
   onSubmit,
-  onCancel,
   isLoading,
 }: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
   categories: { id: string; name: string }[]
   onSubmit: (input: CreateExpenseInput) => void
-  onCancel: () => void
   isLoading: boolean
 }) {
   const [form, setForm] = useState<CreateExpenseInput>({
-    category_id: categories[0]?.id || '',
+    category_id: '',
     amount: 0,
     expense_date: new Date().toISOString().split('T')[0] ?? '',
     payment_method: 'cash',
@@ -230,93 +275,91 @@ function ExpenseForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border bg-card p-6 space-y-4">
-      <h3 className="text-lg font-semibold">New Expense</h3>
-      <div className="grid gap-4 md:grid-cols-3">
-        <div>
-          <label className="text-sm font-medium">Category</label>
-          <select
-            value={form.category_id}
-            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            required
-          >
-            <option value="">Select category</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Amount (₹)</label>
-          <input
-            type="number"
-            value={form.amount || ''}
-            onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            min={1}
-            required
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Date</label>
-          <input
-            type="date"
-            value={form.expense_date}
-            onChange={(e) => setForm({ ...form, expense_date: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            required
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Payment Method</label>
-          <select
-            value={form.payment_method}
-            onChange={(e) => setForm({ ...form, payment_method: e.target.value as ExpensePaymentMethod })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          >
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Vendor</label>
-          <input
-            type="text"
-            value={form.vendor_name}
-            onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            placeholder="Vendor name"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Invoice Ref</label>
-          <input
-            type="text"
-            value={form.invoice_reference || ''}
-            onChange={(e) => setForm({ ...form, invoice_reference: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            placeholder="Bill/Invoice number"
-          />
-        </div>
-        <div className="md:col-span-3">
-          <label className="text-sm font-medium">Description</label>
-          <input
-            type="text"
-            value={form.description || ''}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            placeholder="What was this expense for?"
-          />
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button type="submit" disabled={isLoading} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-          {isLoading ? 'Creating...' : 'Add Expense'}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-lg border px-4 py-2 text-sm font-medium">Cancel</button>
-      </div>
-    </form>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Add Expense</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category *</label>
+              <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Amount (₹) *</label>
+              <Input
+                type="number"
+                value={form.amount || ''}
+                onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+                min={1}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date *</label>
+              <Input
+                type="date"
+                value={form.expense_date}
+                onChange={(e) => setForm({ ...form, expense_date: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Payment Method</label>
+              <Select value={form.payment_method} onValueChange={(v) => setForm({ ...form, payment_method: v as ExpensePaymentMethod })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vendor</label>
+              <Input
+                value={form.vendor_name}
+                onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
+                placeholder="Vendor name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Invoice Ref</label>
+              <Input
+                value={form.invoice_reference || ''}
+                onChange={(e) => setForm({ ...form, invoice_reference: e.target.value })}
+                placeholder="Bill number"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Description</label>
+            <Input
+              value={form.description || ''}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="What was this expense for?"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={isLoading || !form.category_id || !form.amount}>
+              {isLoading ? 'Creating...' : 'Add Expense'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
