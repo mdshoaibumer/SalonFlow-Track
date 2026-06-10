@@ -45,7 +45,7 @@ func (uc *BackupUseCase) CreateBackup(ctx context.Context, backupType string) (*
 	if err != nil {
 		record.Status = domain.BackupStatusFailed
 		record.ErrorMessage = err.Error()
-		uc.repo.UpdateBackupRecord(ctx, record)
+		_ = uc.repo.UpdateBackupRecord(ctx, record)
 		uc.log.Error("backup failed", "error", err)
 		return record, apperror.Internal("backup failed", err)
 	}
@@ -53,7 +53,7 @@ func (uc *BackupUseCase) CreateBackup(ctx context.Context, backupType string) (*
 	record.FileSize = size
 	record.Checksum = checksum
 	record.Status = domain.BackupStatusCompleted
-	uc.repo.UpdateBackupRecord(ctx, record)
+	_ = uc.repo.UpdateBackupRecord(ctx, record)
 
 	uc.log.Info("backup completed", "name", name, "size", size)
 	return record, nil
@@ -76,7 +76,7 @@ func (uc *BackupUseCase) VerifyBackup(ctx context.Context, id uuid.UUID) (*domai
 		record.Status = domain.BackupStatusCorrupted
 		record.ErrorMessage = v.ErrorMessage
 	}
-	uc.repo.UpdateBackupRecord(ctx, record)
+	_ = uc.repo.UpdateBackupRecord(ctx, record)
 
 	return v, nil
 }
@@ -113,13 +113,13 @@ func (uc *BackupUseCase) RestoreBackup(ctx context.Context, id uuid.UUID, notes 
 	if err := uc.engine.RestoreBackup(backupRec.BackupPath, uc.dbPath); err != nil {
 		restoreRec.Status = domain.RestoreStatusFailed
 		restoreRec.ErrorMessage = err.Error()
-		uc.repo.UpdateRestoreRecord(ctx, restoreRec)
+		_ = uc.repo.UpdateRestoreRecord(ctx, restoreRec)
 		uc.log.Error("restore failed", "error", err)
 		return restoreRec, apperror.Internal("restore failed", err)
 	}
 
 	restoreRec.Status = domain.RestoreStatusCompleted
-	uc.repo.UpdateRestoreRecord(ctx, restoreRec)
+	_ = uc.repo.UpdateRestoreRecord(ctx, restoreRec)
 	uc.log.Info("restore completed", "backup_name", backupRec.BackupName)
 
 	return restoreRec, nil

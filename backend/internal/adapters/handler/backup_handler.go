@@ -38,7 +38,7 @@ func (h *BackupHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		BackupType string `json:"backup_type"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	record, err := h.uc.CreateBackup(r.Context(), req.BackupType)
 	if err != nil {
@@ -125,7 +125,7 @@ func (h *BackupHandler) Restore(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Notes string `json:"notes"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	record, err := h.uc.RestoreBackup(r.Context(), id, req.Notes)
 	if err != nil {

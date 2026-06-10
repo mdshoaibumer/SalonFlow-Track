@@ -57,7 +57,7 @@ func (uc *UpdateUseCase) CheckForUpdate(ctx context.Context) (*domain.UpdateStat
 	existing, _ := uc.repo.GetVersionByName(ctx, info.Version)
 	if existing == nil {
 		v := domain.NewAppVersion(info.Version, info.ReleaseDate, info.ReleaseNotes)
-		uc.repo.CreateVersion(ctx, v)
+		_ = uc.repo.CreateVersion(ctx, v)
 	}
 
 	return &domain.UpdateStatus{
@@ -89,7 +89,7 @@ func (uc *UpdateUseCase) DownloadUpdate(ctx context.Context) (*domain.UpdateReco
 	if err := uc.engine.DownloadUpdate(info, destPath); err != nil {
 		record.Status = domain.UpdateHistoryFailed
 		record.ErrorMessage = err.Error()
-		uc.repo.UpdateUpdateRecord(ctx, record)
+		_ = uc.repo.UpdateUpdateRecord(ctx, record)
 		return record, nil
 	}
 
@@ -98,18 +98,18 @@ func (uc *UpdateUseCase) DownloadUpdate(ctx context.Context) (*domain.UpdateReco
 	if err != nil || !valid {
 		record.Status = domain.UpdateHistoryFailed
 		record.ErrorMessage = "Checksum verification failed"
-		uc.repo.UpdateUpdateRecord(ctx, record)
+		_ = uc.repo.UpdateUpdateRecord(ctx, record)
 		return record, nil
 	}
 
 	record.Status = domain.UpdateHistoryDownloaded
-	uc.repo.UpdateUpdateRecord(ctx, record)
+	_ = uc.repo.UpdateUpdateRecord(ctx, record)
 
 	// Update version record
 	v, _ := uc.repo.GetVersionByName(ctx, info.Version)
 	if v != nil {
 		v.Status = domain.UpdateStatusDownloaded
-		uc.repo.UpdateVersion(ctx, v)
+		_ = uc.repo.UpdateVersion(ctx, v)
 	}
 
 	return record, nil
@@ -134,25 +134,25 @@ func (uc *UpdateUseCase) InstallUpdate(ctx context.Context) (*domain.UpdateRecor
 	if err != nil {
 		record.Status = domain.UpdateHistoryFailed
 		record.ErrorMessage = fmt.Sprintf("Pre-update backup failed: %v", err)
-		uc.repo.UpdateUpdateRecord(ctx, record)
+		_ = uc.repo.UpdateUpdateRecord(ctx, record)
 		return record, nil
 	}
 
 	// Mark as installing
 	record.Status = domain.UpdateHistoryInstalling
-	uc.repo.UpdateUpdateRecord(ctx, record)
+	_ = uc.repo.UpdateUpdateRecord(ctx, record)
 
 	// In a desktop app, the actual binary replacement would be handled by
 	// the OS-level installer/updater. Here we record the intent.
 	record.Status = domain.UpdateHistoryCompleted
-	uc.repo.UpdateUpdateRecord(ctx, record)
+	_ = uc.repo.UpdateUpdateRecord(ctx, record)
 
 	// Update version record
 	v, _ := uc.repo.GetVersionByName(ctx, record.ToVersion)
 	if v != nil {
 		v.Status = domain.UpdateStatusInstalled
 		v.InstalledAt = time.Now().UTC().Format(time.RFC3339)
-		uc.repo.UpdateVersion(ctx, v)
+		_ = uc.repo.UpdateVersion(ctx, v)
 	}
 
 	return record, nil

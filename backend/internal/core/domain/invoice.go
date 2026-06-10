@@ -31,12 +31,6 @@ var validPaymentMethods = map[string]bool{
 	PaymentMethodBankTransfer: true,
 }
 
-var validPaymentStatuses = map[string]bool{
-	PaymentStatusPending: true,
-	PaymentStatusPaid:    true,
-	PaymentStatusPartial: true,
-}
-
 // Invoice represents a billing invoice.
 type Invoice struct {
 	ID            uuid.UUID     `json:"id"`

@@ -74,7 +74,7 @@ func (h *LicenseHandler) Renew(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		LicenseKey string `json:"license_key"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	lic, err := h.uc.Renew(r.Context(), req.LicenseKey)
 	if err != nil {

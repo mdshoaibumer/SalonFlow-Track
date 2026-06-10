@@ -37,7 +37,7 @@ func New(cfg config.DatabaseConfig, log *slog.Logger) (*DB, error) {
 		}
 	}
 
-	dsn := cfg.Path
+	var dsn string
 	if cfg.Path != ":memory:" {
 		dsn = fmt.Sprintf("file:%s?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=ON&_cache_size=-64000", cfg.Path)
 	} else {

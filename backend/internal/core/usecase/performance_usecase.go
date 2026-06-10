@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/salonflow/salonflow-track/internal/core/domain"
 	"github.com/salonflow/salonflow-track/internal/core/ports"
-	"github.com/salonflow/salonflow-track/pkg/apperror"
 )
 
 // PerformanceUseCase handles staff performance business logic.
@@ -199,13 +198,4 @@ func CalculateServiceCommission(commissionType string, commissionValue, revenue 
 	default:
 		return 0
 	}
-}
-
-// Validate UUID helper (unexported, used internally).
-func parseUUID(id string) (uuid.UUID, error) {
-	parsed, err := uuid.Parse(id)
-	if err != nil {
-		return uuid.Nil, &apperror.Error{Kind: apperror.KindValidation, Message: "invalid UUID: " + id}
-	}
-	return parsed, nil
 }

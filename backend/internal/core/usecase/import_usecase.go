@@ -66,14 +66,14 @@ func (uc *ImportUseCase) Validate(ctx context.Context, jobID uuid.UUID, mappings
 	mappingJSON, _ := json.Marshal(mappings)
 	job.ColumnMapping = string(mappingJSON)
 	job.Status = domain.ImportStatusValidating
-	uc.repo.UpdateJob(ctx, job)
+	_ = uc.repo.UpdateJob(ctx, job)
 
 	// Parse file
 	headers, rows, err := uc.engine.ParseFile(job.FilePath)
 	if err != nil {
 		job.Status = domain.ImportStatusFailed
 		job.ErrorMessage = err.Error()
-		uc.repo.UpdateJob(ctx, job)
+		_ = uc.repo.UpdateJob(ctx, job)
 		return nil, apperror.Business("PARSE_ERROR", err.Error())
 	}
 
@@ -127,14 +127,14 @@ func (uc *ImportUseCase) Validate(ctx context.Context, jobID uuid.UUID, mappings
 
 	// Batch create logs
 	if len(logEntries) > 0 {
-		uc.repo.CreateLogBatch(ctx, logEntries)
+		_ = uc.repo.CreateLogBatch(ctx, logEntries)
 	}
 
 	job.TotalRows = len(rows)
 	job.ValidRows = validCount
 	job.InvalidRows = invalidCount
 	job.Status = domain.ImportStatusValidated
-	uc.repo.UpdateJob(ctx, job)
+	_ = uc.repo.UpdateJob(ctx, job)
 
 	return &domain.ImportPreview{
 		JobID:       job.ID,

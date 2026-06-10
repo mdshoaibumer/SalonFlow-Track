@@ -58,7 +58,7 @@ func (uc *LicenseUseCase) Validate(ctx context.Context) (*domain.LicenseValidati
 	// Check signature integrity
 	if !uc.engine.ValidateSignature(lic.LicenseKey, lic.ExpiryDate, lic.DeviceID, lic.Signature) {
 		lic.Status = domain.LicenseStatusSuspended
-		uc.repo.UpdateLicense(ctx, lic)
+		_ = uc.repo.UpdateLicense(ctx, lic)
 		uc.logEvent(ctx, lic.ID, domain.LicenseEventSuspended, "Tamper detected: invalid signature")
 		return &domain.LicenseValidation{
 			Valid:        false,
@@ -100,7 +100,7 @@ func (uc *LicenseUseCase) Validate(ctx context.Context) (*domain.LicenseValidati
 		}
 	}
 
-	uc.repo.UpdateLicense(ctx, lic)
+	_ = uc.repo.UpdateLicense(ctx, lic)
 	uc.logEvent(ctx, lic.ID, domain.LicenseEventValidated, "")
 
 	return &domain.LicenseValidation{

@@ -40,7 +40,7 @@ func (h *ImportHandler) Routes() chi.Router {
 // Upload handles POST /import/upload - file upload and initial parsing.
 func (h *ImportHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	// Max 50MB
-	r.ParseMultipartForm(50 << 20)
+	_ = r.ParseMultipartForm(50 << 20)
 
 	file, header, err := r.FormFile("file")
 	if err != nil {

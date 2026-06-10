@@ -1,0 +1,27 @@
+linters:
+  enable:
+    - errcheck
+    - ineffassign
+    - staticcheck
+    - unused
+    - govet
+
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (*database/sql.Tx).Rollback
+      - (*database/sql.Row).Scan
+      - (*database/sql.Rows).Scan
+      - (io).Close
+      - (*encoding/json.Encoder).Encode
+      - (*encoding/json.Decoder).Decode
+      - (net/http.ResponseWriter).Write
+
+issues:
+  exclude-dirs:
+    - dist
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - ineffassign

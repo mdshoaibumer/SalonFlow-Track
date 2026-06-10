@@ -73,7 +73,7 @@ func TestEngine_FormatReceipt_58mm(t *testing.T) {
 	lines := strings.Split(receipt, "\n")
 	for _, line := range lines {
 		if len(line) > 32 && !strings.Contains(line, "GRAND TOTAL") {
-			// Allow some overflow for formatted totals
+			t.Logf("line exceeds 32 chars: %q", line)
 		}
 	}
 	if !strings.Contains(receipt, "Test Salon") {

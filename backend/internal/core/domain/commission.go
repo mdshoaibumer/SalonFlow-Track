@@ -53,12 +53,6 @@ var validCalcTypes = map[string]bool{
 	CalcTypeTiered:      true,
 }
 
-var validCommissionStatuses = map[string]bool{
-	CommissionStatusPending:  true,
-	CommissionStatusApproved: true,
-	CommissionStatusPaid:     true,
-}
-
 // CommissionRule defines a commission calculation rule.
 type CommissionRule struct {
 	ID               uuid.UUID `json:"id"`

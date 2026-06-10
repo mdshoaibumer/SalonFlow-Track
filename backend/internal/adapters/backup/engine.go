@@ -22,13 +22,13 @@ type Engine struct {
 // NewEngine creates a new backup engine.
 func NewEngine() *Engine {
 	dir := defaultBackupDir()
-	os.MkdirAll(dir, 0750)
+	_ = os.MkdirAll(dir, 0750)
 	return &Engine{backupDir: dir}
 }
 
 // NewEngineWithDir creates a backup engine with a custom directory (for testing).
 func NewEngineWithDir(dir string) *Engine {
-	os.MkdirAll(dir, 0750)
+	_ = os.MkdirAll(dir, 0750)
 	return &Engine{backupDir: dir}
 }
 
