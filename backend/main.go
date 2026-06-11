@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -30,6 +31,13 @@ func run() error {
 	app, err := NewApp()
 	if err != nil {
 		return fmt.Errorf("init app: %w", err)
+	}
+
+	// Seed demo data if SALONFLOW_DEMO=1 or --demo flag
+	if os.Getenv("SALONFLOW_DEMO") == "1" || hasFlag("--demo") {
+		if err := SeedDemoData(context.Background(), app.container, app.log); err != nil {
+			return fmt.Errorf("seed demo data: %w", err)
+		}
 	}
 
 	// Strip the "dist" prefix so index.html is at the root of the FS
@@ -81,4 +89,13 @@ func resolveConfigPath() string {
 	}
 	// No config file found — will use built-in defaults
 	return ""
+}
+
+func hasFlag(flag string) bool {
+	for _, arg := range os.Args[1:] {
+		if arg == flag {
+			return true
+		}
+	}
+	return false
 }
