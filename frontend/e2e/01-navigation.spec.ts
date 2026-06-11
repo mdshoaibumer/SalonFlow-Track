@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './base-test'
 
 test.describe('Navigation & Sidebar', () => {
   test('app loads with sidebar visible', async ({ page }) => {
