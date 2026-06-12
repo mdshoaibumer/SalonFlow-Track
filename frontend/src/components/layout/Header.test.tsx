@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from '@/test-utils'
 import { Header } from './Header'
 
@@ -38,15 +38,40 @@ describe('Header', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
-  it('renders light theme button', () => {
+  it('renders theme toggle button', () => {
     window.history.pushState({}, '', '/')
     renderWithProviders(<Header />)
-    expect(screen.getByRole('button', { name: /light theme/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /theme/i })).toBeInTheDocument()
   })
 
   it('renders fallback title for unknown routes', () => {
     window.history.pushState({}, '', '/unknown-path')
     renderWithProviders(<Header />)
-    expect(screen.getByText('SalonFlow Track')).toBeInTheDocument()
+    expect(screen.getByText('Unknown Path')).toBeInTheDocument()
+  })
+
+  it('cycles theme from light to dark on click', () => {
+    window.history.pushState({}, '', '/')
+    renderWithProviders(<Header />)
+    const btn = screen.getByRole('button', { name: /theme/i })
+    // light → dark
+    fireEvent.click(btn)
+    // dark → system
+    fireEvent.click(btn)
+    // system → light
+    fireEvent.click(btn)
+  })
+
+  it('renders breadcrumbs for nested routes', () => {
+    window.history.pushState({}, '', '/reports/revenue')
+    renderWithProviders(<Header />)
+    expect(screen.getByText('Revenue Reports')).toBeInTheDocument()
+  })
+
+  it('renders multi-segment breadcrumbs with separator', () => {
+    window.history.pushState({}, '', '/reports/staff')
+    renderWithProviders(<Header />)
+    expect(screen.getByText('Staff Reports')).toBeInTheDocument()
+    expect(screen.getByText('/')).toBeInTheDocument()
   })
 })

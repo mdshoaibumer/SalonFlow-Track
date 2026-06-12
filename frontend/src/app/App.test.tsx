@@ -26,6 +26,6 @@ describe('App', () => {
 
   it('renders the main layout', () => {
     render(<App />)
-    expect(screen.getByRole('navigation') || document.querySelector('nav') || document.querySelector('aside')).toBeTruthy()
+    expect(screen.getAllByRole('navigation').length).toBeGreaterThan(0)
   })
 })

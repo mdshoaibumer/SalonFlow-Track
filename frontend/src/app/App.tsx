@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { ThemeProvider } from './providers/ThemeProvider'
 import { AppRouter } from './router/AppRouter'
 
@@ -19,6 +20,17 @@ export function App() {
       <ThemeProvider defaultTheme="light" storageKey="salonflow-theme">
         <BrowserRouter>
           <AppRouter />
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              className: 'surface-raised text-[13px] border-border/60 shadow-elevation-3',
+              duration: 3500,
+            }}
+            gap={8}
+            offset={16}
+            richColors
+            closeButton
+          />
         </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>

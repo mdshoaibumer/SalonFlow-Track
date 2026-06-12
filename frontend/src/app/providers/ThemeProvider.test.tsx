@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import { ThemeProvider, useTheme } from './ThemeProvider'
 
 beforeAll(() => {
@@ -29,13 +29,13 @@ function TestComponent() {
 }
 
 describe('ThemeProvider', () => {
-  it('provides light theme by default', () => {
+  it('provides system theme by default', () => {
     const { getByTestId } = render(
       <ThemeProvider>
         <TestComponent />
       </ThemeProvider>
     )
-    expect(getByTestId('theme').textContent).toBe('light')
+    expect(getByTestId('theme').textContent).toBe('system')
   })
 
   it('adds light class to document root', () => {
@@ -53,7 +53,7 @@ describe('ThemeProvider', () => {
       return <span data-testid="theme-val">{ctx.theme}</span>
     }
     const { getByTestId } = render(<Orphan />)
-    expect(getByTestId('theme-val').textContent).toBe('light')
+    expect(getByTestId('theme-val').textContent).toBe('system')
   })
 
   it('default context setTheme returns null', () => {
@@ -67,13 +67,15 @@ describe('ThemeProvider', () => {
     expect(setThemeFn('light')).toBeNull()
   })
 
-  it('setTheme inside provider is a no-op', () => {
+  it('setTheme inside provider updates theme', () => {
     const { getByText, getByTestId } = render(
       <ThemeProvider>
         <TestComponent />
       </ThemeProvider>
     )
-    getByText('Set Light').click()
+    act(() => {
+      getByText('Set Light').click()
+    })
     expect(getByTestId('theme').textContent).toBe('light')
   })
 
@@ -84,5 +86,28 @@ describe('ThemeProvider', () => {
       </ThemeProvider>
     )
     expect(getByTestId('theme').textContent).toBe('light')
+  })
+
+  it('applies system dark theme when prefers-color-scheme is dark', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(prefers-color-scheme: dark)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    render(
+      <ThemeProvider defaultTheme="system" storageKey="dark-test-key">
+        <TestComponent />
+      </ThemeProvider>
+    )
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 })

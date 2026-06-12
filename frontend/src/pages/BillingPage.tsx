@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toastSuccess } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -10,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { useCustomerList } from '@/hooks/useCustomers'
 import { useServiceList } from '@/hooks/useServices'
+import { useStaffList } from '@/hooks/useStaff'
 import { useCreateInvoice } from '@/hooks/useInvoices'
 import { Search, Plus, Trash2, Receipt } from 'lucide-react'
 import type { Customer, Service, CreateInvoiceInput, PaymentMethod } from '@/types'
@@ -18,13 +20,14 @@ interface BillingItem {
   service: Service
   quantity: number
   discount: number
+  staff_id: string
 }
 
 export function BillingPage() {
   const [customerSearch, setCustomerSearch] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
-  const [selectedStaffId, setSelectedStaffId] = useState('')
   const [items, setItems] = useState<BillingItem[]>([])
+  const [defaultStaffId, setDefaultStaffId] = useState('')
   const [discount, setDiscount] = useState(0)
   const [tax, setTax] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
@@ -32,6 +35,7 @@ export function BillingPage() {
 
   const { data: customerData } = useCustomerList({ search: customerSearch || undefined, per_page: 5 })
   const { data: serviceData } = useServiceList({ status: 'active', per_page: 100 })
+  const { data: staffData } = useStaffList({ status: 'active', per_page: 50 })
   const createInvoice = useCreateInvoice()
 
   const subtotal = items.reduce((sum, item) => sum + (item.service.price * item.quantity - item.discount), 0)
@@ -42,7 +46,7 @@ export function BillingPage() {
     if (existing) {
       setItems(items.map((i) => i.service.id === service.id ? { ...i, quantity: i.quantity + 1 } : i))
     } else {
-      setItems([...items, { service, quantity: 1, discount: 0 }])
+      setItems([...items, { service, quantity: 1, discount: 0, staff_id: defaultStaffId }])
     }
   }
 
@@ -50,12 +54,22 @@ export function BillingPage() {
     setItems(items.filter((i) => i.service.id !== serviceId))
   }
 
+  const updateItemStaff = (serviceId: string, staffId: string) => {
+    setItems(items.map((i) => i.service.id === serviceId ? { ...i, staff_id: staffId } : i))
+  }
+
+  const allItemsHaveStaff = items.length > 0 && items.every(i => i.staff_id)
+
   const handleGenerateInvoice = () => {
-    if (!selectedCustomer || !selectedStaffId || items.length === 0) return
+    if (!selectedCustomer || !allItemsHaveStaff) return
+
+    // Use the first item's staff as the invoice-level staff for backward compat
+    const primaryStaffId = items[0]?.staff_id ?? ''
+    if (!primaryStaffId) return
 
     const input: CreateInvoiceInput = {
       customer_id: selectedCustomer.id,
-      staff_id: selectedStaffId,
+      staff_id: primaryStaffId,
       items: items.map((item) => ({
         service_id: item.service.id,
         quantity: item.quantity,
@@ -69,6 +83,7 @@ export function BillingPage() {
 
     createInvoice.mutate(input, {
       onSuccess: () => {
+        toastSuccess('Invoice generated')
         setSelectedCustomer(null)
         setItems([])
         setDiscount(0)
@@ -131,14 +146,20 @@ export function BillingPage() {
             )}
           </div>
 
-          {/* Staff ID */}
+          {/* Default Staff */}
           <div className="rounded-lg border bg-card p-4 space-y-3">
-            <h3 className="font-semibold">Staff</h3>
-            <Input
-              placeholder="Enter staff ID"
-              value={selectedStaffId}
-              onChange={(e) => setSelectedStaffId(e.target.value)}
-            />
+            <h3 className="font-semibold">Default Staff</h3>
+            <p className="text-xs text-muted-foreground">Pre-selects staff for new services added. You can change per item below.</p>
+            <Select value={defaultStaffId} onValueChange={setDefaultStaffId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select staff member" />
+              </SelectTrigger>
+              <SelectContent>
+                {staffData?.staff.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Services */}
@@ -169,19 +190,31 @@ export function BillingPage() {
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">Add services to begin</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {items.map((item) => (
-                  <div key={item.service.id} className="flex items-center justify-between text-sm">
-                    <div>
-                      <span>{item.service.name}</span>
-                      <span className="text-muted-foreground ml-1">x{item.quantity}</span>
+                  <div key={item.service.id} className="border rounded p-2 space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-medium">{item.service.name}</span>
+                        <span className="text-muted-foreground ml-1">x{item.quantity}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span>₹{(item.service.price * item.quantity).toLocaleString('en-IN')}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeItem(item.service.id)}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span>₹{(item.service.price * item.quantity).toLocaleString('en-IN')}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeItem(item.service.id)}>
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
+                    <Select value={item.staff_id} onValueChange={(v) => updateItemStaff(item.service.id, v)}>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue placeholder="Assign staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffData?.staff.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 ))}
               </div>
@@ -240,7 +273,7 @@ export function BillingPage() {
               <Button
                 className="w-full"
                 size="lg"
-                disabled={!selectedCustomer || !selectedStaffId || items.length === 0 || createInvoice.isPending}
+                disabled={!selectedCustomer || !allItemsHaveStaff || createInvoice.isPending}
                 onClick={handleGenerateInvoice}
               >
                 <Receipt className="mr-2 h-4 w-4" />

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toastSuccess } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -63,11 +64,11 @@ export function CustomersPage() {
     if (selectedCustomer) {
       updateMutation.mutate(
         { id: selectedCustomer.id, input: values as unknown as UpdateCustomerInput },
-        { onSuccess: () => setFormOpen(false) }
+        { onSuccess: () => { setFormOpen(false); toastSuccess('Customer updated') } }
       )
     } else {
       createMutation.mutate(values as unknown as CreateCustomerInput, {
-        onSuccess: () => setFormOpen(false),
+        onSuccess: () => { setFormOpen(false); toastSuccess('Customer added') },
       })
     }
   }
@@ -75,7 +76,7 @@ export function CustomersPage() {
   const handleDeleteConfirm = () => {
     if (selectedCustomer) {
       deleteMutation.mutate(selectedCustomer.id, {
-        onSuccess: () => setDeleteOpen(false),
+        onSuccess: () => { setDeleteOpen(false); toastSuccess('Customer deleted') },
       })
     }
   }

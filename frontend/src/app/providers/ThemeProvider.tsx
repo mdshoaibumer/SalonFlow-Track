@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = 'light'
+type Theme = 'light' | 'dark' | 'system'
 
 interface ThemeProviderState {
   theme: Theme
@@ -8,7 +8,7 @@ interface ThemeProviderState {
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>({
-  theme: 'light',
+  theme: 'system',
   setTheme: () => null,
 })
 
@@ -20,21 +20,32 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({
   children,
-  defaultTheme: _defaultTheme = 'light',
-  storageKey: _storageKey = 'salonflow-theme',
+  defaultTheme = 'system',
+  storageKey = 'salonflow-theme',
 }: ThemeProviderProps) {
-  const [theme] = useState<Theme>('light')
+  const [theme, setTheme] = useState<Theme>(
+    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+  )
 
   useEffect(() => {
     const root = window.document.documentElement
     root.classList.remove('light', 'dark')
-    root.classList.add('light')
+
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      root.classList.add(systemTheme)
+    } else {
+      root.classList.add(theme)
+    }
   }, [theme])
 
   const value = {
     theme,
-    setTheme: (_theme: Theme) => {
-      // Light theme only - no theme switching
+    setTheme: (newTheme: Theme) => {
+      localStorage.setItem(storageKey, newTheme)
+      setTheme(newTheme)
     },
   }
 

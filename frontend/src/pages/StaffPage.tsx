@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { toastSuccess } from '@/lib/toast'
 
 const designationLabels: Record<string, string> = {
   stylist: 'Stylist',
@@ -74,11 +75,11 @@ export function StaffPage() {
     if (editingStaff) {
       updateMutation.mutate(
         { id: editingStaff.id, input: values as unknown as UpdateStaffInput },
-        { onSuccess: () => setFormOpen(false) }
+        { onSuccess: () => { setFormOpen(false); toastSuccess('Staff member updated') } }
       )
     } else {
       createMutation.mutate(values as unknown as CreateStaffInput, {
-        onSuccess: () => setFormOpen(false),
+        onSuccess: () => { setFormOpen(false); toastSuccess('Staff member created') },
       })
     }
   }
@@ -86,7 +87,7 @@ export function StaffPage() {
   const handleDeleteConfirm = () => {
     if (!deletingStaff) return
     deleteMutation.mutate(deletingStaff.id, {
-      onSuccess: () => setDeletingStaff(null),
+      onSuccess: () => { setDeletingStaff(null); toastSuccess('Staff member deleted') },
     })
   }
 

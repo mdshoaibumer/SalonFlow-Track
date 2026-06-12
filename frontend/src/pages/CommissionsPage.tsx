@@ -110,7 +110,7 @@ export function CommissionsPage() {
                     {rule.calculation_type === 'percentage' ? `${rule.calculation_value}%` : `₹${rule.calculation_value}`}
                   </td>
                   <td className="px-6 py-4 text-sm">
-                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${rule.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${rule.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
                       {rule.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>

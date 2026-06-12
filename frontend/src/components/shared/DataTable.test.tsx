@@ -114,7 +114,7 @@ describe('DataTable', () => {
     const buttons = screen.getAllByRole('button')
     const nextBtn = buttons.find(b => b.querySelector('[class*="chevron-right"]') || b.getAttribute('aria-label')?.includes('next'))
     // Find button with ChevronRight icon - it's the 3rd pagination button
-    const paginationButtons = buttons.filter(b => b.classList.contains('h-8'))
+    const paginationButtons = buttons.filter(b => b.classList.contains('h-7'))
     await user.click(paginationButtons[2]) // Next button
     expect(onPageChange).toHaveBeenCalledWith(2)
   })
@@ -129,7 +129,7 @@ describe('DataTable', () => {
         onPageChange={vi.fn()}
       />
     )
-    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-7'))
     expect(buttons[0]).toBeDisabled() // First page button
     expect(buttons[1]).toBeDisabled() // Prev button
   })
@@ -144,7 +144,7 @@ describe('DataTable', () => {
         onPageChange={vi.fn()}
       />
     )
-    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-7'))
     expect(buttons[2]).toBeDisabled() // Next button
     expect(buttons[3]).toBeDisabled() // Last page button
   })
@@ -206,7 +206,7 @@ describe('DataTable', () => {
         onPageChange={onPageChange}
       />
     )
-    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-7'))
     // buttons: [first, prev, next, last]
     await user.click(buttons[3]) // Last page
     expect(onPageChange).toHaveBeenCalledWith(5)
@@ -224,7 +224,7 @@ describe('DataTable', () => {
         onPageChange={onPageChange}
       />
     )
-    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-7'))
     await user.click(buttons[0]) // First page
     expect(onPageChange).toHaveBeenCalledWith(1)
   })
@@ -241,7 +241,7 @@ describe('DataTable', () => {
         onPageChange={onPageChange}
       />
     )
-    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-8'))
+    const buttons = screen.getAllByRole('button').filter(b => b.classList.contains('h-7'))
     await user.click(buttons[1]) // Prev
     expect(onPageChange).toHaveBeenCalledWith(2)
   })

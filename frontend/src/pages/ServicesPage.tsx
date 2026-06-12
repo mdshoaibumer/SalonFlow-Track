@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toastSuccess } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -76,11 +77,11 @@ export function ServicesPage() {
     if (selectedService) {
       updateMutation.mutate(
         { id: selectedService.id, input: values as unknown as UpdateServiceInput },
-        { onSuccess: () => setFormOpen(false) }
+        { onSuccess: () => { setFormOpen(false); toastSuccess('Service updated') } }
       )
     } else {
       createMutation.mutate(values as unknown as CreateServiceInput, {
-        onSuccess: () => setFormOpen(false),
+        onSuccess: () => { setFormOpen(false); toastSuccess('Service created') },
       })
     }
   }
@@ -88,7 +89,7 @@ export function ServicesPage() {
   const handleDeleteConfirm = () => {
     if (selectedService) {
       deleteMutation.mutate(selectedService.id, {
-        onSuccess: () => setDeleteOpen(false),
+        onSuccess: () => { setDeleteOpen(false); toastSuccess('Service deleted') },
       })
     }
   }

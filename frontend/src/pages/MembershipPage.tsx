@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toastSuccess } from '@/lib/toast'
 import { useMembershipPlans, useCreatePlan, useDeletePlan, useSellPlan, useUseSession, useSubscriptions, useMembershipStats } from '@/hooks/useMembership'
 import type { MembershipPlan, MemberSubscription } from '@/types'
 
@@ -49,7 +50,7 @@ function PlansTab() {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault()
-    createMutation.mutate({ ...form, is_active: true }, { onSuccess: () => setShowForm(false) })
+    createMutation.mutate({ ...form, is_active: true }, { onSuccess: () => { setShowForm(false); toastSuccess('Membership created') } })
   }
 
   return (
@@ -103,7 +104,7 @@ function PlansTab() {
                 <h3 className="font-medium">{p.name}</h3>
                 <span className={`text-xs px-2 py-0.5 rounded ${p.plan_type === 'membership' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>{p.plan_type}</span>
               </div>
-              <button onClick={() => deleteMutation.mutate(p.id)} className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded">Delete</button>
+              <button onClick={() => deleteMutation.mutate(p.id, { onSuccess: () => toastSuccess('Membership deleted') })} className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded">Delete</button>
             </div>
             <p className="text-xl font-bold mt-2">₹{p.price}</p>
             <p className="text-xs text-muted-foreground">{p.validity_days} days &middot; {p.total_sessions} sessions</p>

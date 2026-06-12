@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toastSuccess } from '@/lib/toast'
 import { useAdvanceList, useCreateAdvance, useApproveAdvance, useRejectAdvance } from '@/hooks/useSalary'
 import { Plus, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -51,7 +52,7 @@ export function AdvancesPage() {
   const rejectAdv = useRejectAdvance()
 
   const handleCreate = (input: CreateAdvanceInput) => {
-    createAdv.mutate(input, { onSuccess: () => setFormOpen(false) })
+    createAdv.mutate(input, { onSuccess: () => { setFormOpen(false); toastSuccess('Advance created') } })
   }
 
   const columns: ColumnDef<Advance, unknown>[] = [
@@ -78,12 +79,12 @@ export function AdvancesPage() {
     {
       accessorKey: 'recovered_amount',
       header: 'Recovered',
-      cell: ({ row }) => <span className="text-green-600">₹{row.original.recovered_amount.toLocaleString('en-IN')}</span>,
+      cell: ({ row }) => <span className="text-green-600 dark:text-green-400">₹{row.original.recovered_amount.toLocaleString('en-IN')}</span>,
     },
     {
       accessorKey: 'remaining_amount',
       header: 'Remaining',
-      cell: ({ row }) => <span className="text-orange-600">₹{row.original.remaining_amount.toLocaleString('en-IN')}</span>,
+      cell: ({ row }) => <span className="text-orange-600 dark:text-orange-400">₹{row.original.remaining_amount.toLocaleString('en-IN')}</span>,
     },
     {
       accessorKey: 'status',
@@ -100,10 +101,10 @@ export function AdvancesPage() {
       cell: ({ row }) =>
         row.original.status === 'pending' ? (
           <div className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={() => approveAdv.mutate(row.original.id)}>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 dark:text-green-400" onClick={() => approveAdv.mutate(row.original.id, { onSuccess: () => toastSuccess('Advance approved') })}>
               <Check className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600" onClick={() => rejectAdv.mutate(row.original.id)}>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 dark:text-red-400" onClick={() => rejectAdv.mutate(row.original.id, { onSuccess: () => toastSuccess('Advance rejected') })}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>

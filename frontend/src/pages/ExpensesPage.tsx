@@ -29,6 +29,7 @@ import { DataTable, type ColumnDef } from '@/components/shared/DataTable'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import type { Expense, CreateExpenseInput, ExpensePaymentMethod } from '@/types'
+import { toastSuccess } from '@/lib/toast'
 
 const PAYMENT_METHODS: { value: ExpensePaymentMethod; label: string }[] = [
   { value: 'cash', label: 'Cash' },
@@ -64,7 +65,7 @@ export function ExpensesPage() {
   const deleteExp = useDeleteExpense()
 
   const handleDelete = (id: string) => {
-    deleteExp.mutate(id)
+    deleteExp.mutate(id, { onSuccess: () => toastSuccess('Expense deleted') })
   }
 
   const handleExport = () => {
@@ -238,7 +239,7 @@ export function ExpensesPage() {
         onOpenChange={setFormOpen}
         categories={categories || []}
         onSubmit={(input) => {
-          createExp.mutate(input, { onSuccess: () => setFormOpen(false) })
+          createExp.mutate(input, { onSuccess: () => { setFormOpen(false); toastSuccess('Expense created') } })
         }}
         isLoading={createExp.isPending}
       />

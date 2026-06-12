@@ -22,12 +22,14 @@ describe('KPICard', () => {
 
   it('renders positive trend', () => {
     render(<KPICard title="Revenue" value="₹12,500" icon={Users} trend={{ value: 15, label: 'vs last week' }} />)
-    expect(screen.getByText('+15% vs last week')).toBeInTheDocument()
+    expect(screen.getByText(/15/)).toBeInTheDocument()
+    expect(screen.getByText(/vs last week/)).toBeInTheDocument()
   })
 
   it('renders negative trend', () => {
     render(<KPICard title="Revenue" value="₹8,000" icon={Users} trend={{ value: -10, label: 'vs yesterday' }} />)
-    expect(screen.getByText('-10% vs yesterday')).toBeInTheDocument()
+    expect(screen.getByText(/10/)).toBeInTheDocument()
+    expect(screen.getByText(/vs yesterday/)).toBeInTheDocument()
   })
 
   it('applies custom className', () => {

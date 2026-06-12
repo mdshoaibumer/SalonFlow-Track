@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { toastSuccess } from '@/lib/toast'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/services/api-client'
 import { getHealthStatus } from '@/services/health'
@@ -20,10 +21,22 @@ import { Settings, Store, Bell, Database, Shield, Check } from 'lucide-react'
 import { useTheme } from '@/app/providers/ThemeProvider'
 import type { Setting } from '@/types'
 
+const SETTINGS_STORAGE_KEY = 'salonflow-settings'
+
+function loadSavedSettings(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general')
   const { theme, setTheme } = useTheme()
   const [saved, setSaved] = useState(false)
+  const [salonSettings, setSalonSettings] = useState<Record<string, string>>(loadSavedSettings)
 
   const { data: health } = useQuery({
     queryKey: ['health'],
@@ -39,7 +52,27 @@ export function SettingsPage() {
     },
   })
 
+  // Initialize form from fetched settings (only once)
+  useEffect(() => {
+    if (settings && settings.length > 0) {
+      const saved = loadSavedSettings()
+      if (Object.keys(saved).length === 0) {
+        const initial: Record<string, string> = {}
+        for (const s of settings) {
+          initial[s.key] = s.value
+        }
+        setSalonSettings(initial)
+      }
+    }
+  }, [settings])
+
+  const updateSetting = (key: string, value: string) => {
+    setSalonSettings(prev => ({ ...prev, [key]: value }))
+  }
+
   const handleSave = () => {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(salonSettings))
+    toastSuccess('Settings saved')
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -87,7 +120,7 @@ export function SettingsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Theme</label>
-                    <Select value={theme} onValueChange={(_v: string) => setTheme('light' as const)}>
+                    <Select value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -135,21 +168,24 @@ export function SettingsPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Salon Name</label>
                     <Input
-                      defaultValue={settings?.find((s) => s.key === 'salon_name')?.value || ''}
+                      value={salonSettings['salon_name'] || ''}
+                      onChange={(e) => updateSetting('salon_name', e.target.value)}
                       placeholder="Enter salon name"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Phone</label>
                     <Input
-                      defaultValue={settings?.find((s) => s.key === 'salon_phone')?.value || ''}
+                      value={salonSettings['salon_phone'] || ''}
+                      onChange={(e) => updateSetting('salon_phone', e.target.value)}
                       placeholder="Phone number"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Email</label>
                     <Input
-                      defaultValue={settings?.find((s) => s.key === 'salon_email')?.value || ''}
+                      value={salonSettings['salon_email'] || ''}
+                      onChange={(e) => updateSetting('salon_email', e.target.value)}
                       placeholder="Email"
                       type="email"
                     />
@@ -157,7 +193,8 @@ export function SettingsPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">GST Number</label>
                     <Input
-                      defaultValue={settings?.find((s) => s.key === 'gst_number')?.value || ''}
+                      value={salonSettings['gst_number'] || ''}
+                      onChange={(e) => updateSetting('gst_number', e.target.value)}
                       placeholder="GSTIN"
                     />
                   </div>
@@ -165,7 +202,8 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Address</label>
                   <Input
-                    defaultValue={settings?.find((s) => s.key === 'salon_address')?.value || ''}
+                    value={salonSettings['salon_address'] || ''}
+                    onChange={(e) => updateSetting('salon_address', e.target.value)}
                     placeholder="Full address"
                   />
                 </div>
@@ -181,11 +219,18 @@ export function SettingsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Invoice Prefix</label>
-                    <Input defaultValue={settings?.find((s) => s.key === 'invoice_prefix')?.value || 'INV'} />
+                    <Input
+                      value={salonSettings['invoice_prefix'] || 'INV'}
+                      onChange={(e) => updateSetting('invoice_prefix', e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Tax Rate (%)</label>
-                    <Input defaultValue={settings?.find((s) => s.key === 'tax_rate')?.value || '18'} type="number" />
+                    <Input
+                      value={salonSettings['tax_rate'] || '18'}
+                      onChange={(e) => updateSetting('tax_rate', e.target.value)}
+                      type="number"
+                    />
                   </div>
                 </div>
               </CardContent>

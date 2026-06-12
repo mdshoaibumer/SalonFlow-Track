@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useProductList, useCreateProduct, useDeleteProduct, useInventoryStats } from '@/hooks/useProduct'
 import { Plus, Trash2, Package, AlertTriangle, IndianRupee, ShoppingCart } from 'lucide-react'
 import type { CreateProductInput, ProductCategory } from '@/types'
+import { toastSuccess } from '@/lib/toast'
 
 const CATEGORIES: { value: ProductCategory; label: string }[] = [
   { value: 'hair_care', label: 'Hair Care' },
@@ -24,12 +25,12 @@ export function ProductsPage() {
   const deleteProd = useDeleteProduct()
 
   const handleCreate = (input: CreateProductInput) => {
-    createProd.mutate(input, { onSuccess: () => setShowForm(false) })
+    createProd.mutate(input, { onSuccess: () => { setShowForm(false); toastSuccess('Product created') } })
   }
 
   const handleDelete = (id: string, name: string) => {
     if (confirm(`Delete product "${name}"?`)) {
-      deleteProd.mutate(id)
+      deleteProd.mutate(id, { onSuccess: () => toastSuccess('Product deleted') })
     }
   }
 

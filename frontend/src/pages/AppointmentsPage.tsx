@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useAppointments, useCreateAppointment, useUpdateAppointmentStatus, useDeleteAppointment } from '@/hooks/useAppointments'
+import { useCustomerList } from '@/hooks/useCustomers'
+import { useStaffList } from '@/hooks/useStaff'
 import type { Appointment, AppointmentFilter, AppointmentStatus } from '@/types'
 
 const STATUS_COLORS: Record<string, string> = {
-  booked: 'bg-blue-100 text-blue-800',
+  booked: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   confirmed: 'bg-indigo-100 text-indigo-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   no_show: 'bg-gray-100 text-gray-800',
 }
 
@@ -109,6 +111,8 @@ function CalendarTab() {
 
 function CreateAppointmentTab({ onDone }: { onDone: () => void }) {
   const createMutation = useCreateAppointment()
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [staffSearch, setStaffSearch] = useState('')
   const [form, setForm] = useState({
     customer_id: '',
     staff_id: '',
@@ -116,6 +120,11 @@ function CreateAppointmentTab({ onDone }: { onDone: () => void }) {
     end_time: '',
     notes: '',
   })
+  const [selectedCustomerName, setSelectedCustomerName] = useState('')
+  const [selectedStaffName, setSelectedStaffName] = useState('')
+
+  const { data: customerData } = useCustomerList({ search: customerSearch || undefined, per_page: 5 })
+  const { data: staffData } = useStaffList({ search: staffSearch || undefined, status: 'active', per_page: 10 })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,12 +134,70 @@ function CreateAppointmentTab({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
       <div>
-        <label className="text-sm font-medium">Customer ID</label>
-        <input className="w-full border rounded px-3 py-2 mt-1" value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })} required />
+        <label className="text-sm font-medium">Customer</label>
+        {selectedCustomerName ? (
+          <div className="flex items-center justify-between border rounded px-3 py-2 mt-1 bg-muted/50">
+            <span className="font-medium">{selectedCustomerName}</span>
+            <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { setForm({ ...form, customer_id: '' }); setSelectedCustomerName(''); setCustomerSearch('') }}>Change</button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              className="w-full border rounded px-3 py-2 mt-1"
+              placeholder="Search customer by name or phone..."
+              value={customerSearch}
+              onChange={e => setCustomerSearch(e.target.value)}
+            />
+            {customerData && customerData.customers.length > 0 && customerSearch && (
+              <div className="absolute z-10 w-full border rounded-md bg-background divide-y max-h-40 overflow-y-auto mt-1 shadow-md">
+                {customerData.customers.map((c) => (
+                  <button
+                    type="button"
+                    key={c.id}
+                    className="w-full p-2 text-left hover:bg-muted/50 text-sm"
+                    onClick={() => { setForm({ ...form, customer_id: c.id }); setSelectedCustomerName(`${c.full_name} — ${c.phone}`); setCustomerSearch('') }}
+                  >
+                    <span className="font-medium">{c.full_name}</span>
+                    <span className="text-muted-foreground ml-2">{c.phone}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div>
-        <label className="text-sm font-medium">Staff ID</label>
-        <input className="w-full border rounded px-3 py-2 mt-1" value={form.staff_id} onChange={e => setForm({ ...form, staff_id: e.target.value })} required />
+        <label className="text-sm font-medium">Staff</label>
+        {selectedStaffName ? (
+          <div className="flex items-center justify-between border rounded px-3 py-2 mt-1 bg-muted/50">
+            <span className="font-medium">{selectedStaffName}</span>
+            <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { setForm({ ...form, staff_id: '' }); setSelectedStaffName(''); setStaffSearch('') }}>Change</button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              className="w-full border rounded px-3 py-2 mt-1"
+              placeholder="Search staff by name..."
+              value={staffSearch}
+              onChange={e => setStaffSearch(e.target.value)}
+            />
+            {staffData && staffData.staff.length > 0 && (
+              <div className="absolute z-10 w-full border rounded-md bg-background divide-y max-h-40 overflow-y-auto mt-1 shadow-md">
+                {staffData.staff.map((s) => (
+                  <button
+                    type="button"
+                    key={s.id}
+                    className="w-full p-2 text-left hover:bg-muted/50 text-sm"
+                    onClick={() => { setForm({ ...form, staff_id: s.id }); setSelectedStaffName(s.full_name); setStaffSearch('') }}
+                  >
+                    <span className="font-medium">{s.full_name}</span>
+                    <span className="text-muted-foreground ml-2">{s.designation}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -146,7 +213,7 @@ function CreateAppointmentTab({ onDone }: { onDone: () => void }) {
         <label className="text-sm font-medium">Notes</label>
         <textarea className="w-full border rounded px-3 py-2 mt-1" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} />
       </div>
-      <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary text-primary-foreground rounded">
+      <button type="submit" disabled={createMutation.isPending || !form.customer_id || !form.staff_id} className="px-4 py-2 bg-primary text-primary-foreground rounded disabled:opacity-50">
         {createMutation.isPending ? 'Creating...' : 'Create Appointment'}
       </button>
     </form>

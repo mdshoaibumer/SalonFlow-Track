@@ -17,8 +17,8 @@ function formatDate(dateStr: string): string {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    completed: 'bg-green-100 text-green-800',
-    verified: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    verified: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     pending: 'bg-yellow-100 text-yellow-800',
     failed: 'bg-red-100 text-red-800',
     corrupted: 'bg-red-100 text-red-800',
