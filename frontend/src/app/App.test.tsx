@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { App } from './App'
 
 beforeAll(() => {
@@ -24,8 +24,10 @@ describe('App', () => {
     expect(document.body).toBeDefined()
   })
 
-  it('renders the main layout', () => {
+  it('renders the main layout', async () => {
     render(<App />)
-    expect(screen.getAllByRole('navigation').length).toBeGreaterThan(0)
+    await waitFor(() => {
+      expect(screen.getAllByRole('navigation').length).toBeGreaterThan(0)
+    })
   })
 })

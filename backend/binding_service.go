@@ -10,8 +10,9 @@ import (
 
 // ServiceService exposes salon service operations to the Wails frontend.
 type ServiceService struct {
-	ctx context.Context
-	uc  *usecase.ServiceUseCase
+	ctx   context.Context
+	uc    *usecase.ServiceUseCase
+	guard *PermissionGuard
 }
 
 func NewServiceService(uc *usecase.ServiceUseCase) *ServiceService {

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '../providers/ThemeProvider'
+import { AuthProvider } from '../providers/AuthProvider'
 import { MainLayout } from './MainLayout'
 
 beforeAll(() => {
@@ -22,18 +23,22 @@ beforeAll(() => {
 })
 
 describe('MainLayout', () => {
-  it('renders sidebar, header and main area', () => {
+  it('renders sidebar, header and main area', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <MemoryRouter>
-            <MainLayout />
-          </MemoryRouter>
+          <AuthProvider>
+            <MemoryRouter>
+              <MainLayout />
+            </MemoryRouter>
+          </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
     )
-    expect(document.querySelector('main')).toBeInTheDocument()
-    expect(document.querySelector('header')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(document.querySelector('main')).toBeInTheDocument()
+      expect(document.querySelector('header')).toBeInTheDocument()
+    })
   })
 })

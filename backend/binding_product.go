@@ -10,8 +10,10 @@ import (
 
 // ProductService exposes product/inventory operations to the Wails frontend.
 type ProductService struct {
-	ctx context.Context
-	uc  *usecase.ProductUseCase
+	ctx      context.Context
+	uc       *usecase.ProductUseCase
+	guard    *PermissionGuard
+	licGuard *LicenseGuard
 }
 
 func NewProductService(uc *usecase.ProductUseCase) *ProductService {
@@ -55,6 +57,9 @@ func (s *ProductService) DeleteProduct(id string) error {
 }
 
 func (s *ProductService) AdjustStock(input usecase.StockAdjustInput) (*domain.StockTransaction, error) {
+	if err := s.licGuard.RequireActive(domain.OpInventoryChange); err != nil {
+		return nil, err
+	}
 	return s.uc.AdjustStock(s.ctx, input)
 }
 

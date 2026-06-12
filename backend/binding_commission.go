@@ -11,8 +11,9 @@ import (
 
 // CommissionService exposes commission operations to the Wails frontend.
 type CommissionService struct {
-	ctx context.Context
-	uc  *usecase.CommissionUseCase
+	ctx   context.Context
+	uc    *usecase.CommissionUseCase
+	guard *PermissionGuard
 }
 
 func NewCommissionService(uc *usecase.CommissionUseCase) *CommissionService {

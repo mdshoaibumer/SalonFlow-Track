@@ -24,6 +24,16 @@ const (
 	LicenseEventSuspended    = "suspended"
 	LicenseEventGraceStarted = "grace_started"
 	LicenseEventRestricted   = "restricted"
+	LicenseEventImported     = "imported"
+)
+
+// Notification types.
+const (
+	NotifySevenDaysRemaining   = "7_days_remaining"
+	NotifyThreeDaysRemaining   = "3_days_remaining"
+	NotifyOneDayRemaining      = "1_day_remaining"
+	NotifyExpired              = "expired"
+	NotifyGracePeriodRemaining = "grace_period_remaining"
 )
 
 // GracePeriodDays is the number of days after expiry before restricted mode.
@@ -38,9 +48,11 @@ type License struct {
 	DeviceID       string    `json:"device_id"`
 	IssuedDate     string    `json:"issued_date"`
 	ExpiryDate     string    `json:"expiry_date"`
+	GraceUntil     string    `json:"grace_until"`
 	Status         string    `json:"status"`
 	Signature      string    `json:"signature"`
 	LastValidation string    `json:"last_validation"`
+	LastVerifiedAt string    `json:"last_verified_at"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -48,6 +60,8 @@ type License struct {
 // NewLicense creates a new license.
 func NewLicense(key, customerName, salonName, deviceID, issuedDate, expiryDate, signature string) *License {
 	now := time.Now().UTC()
+	expiry, _ := time.Parse("2006-01-02", expiryDate)
+	graceUntil := expiry.AddDate(0, 0, GracePeriodDays).Format("2006-01-02")
 	return &License{
 		ID:             uid.New(),
 		LicenseKey:     key,
@@ -56,9 +70,11 @@ func NewLicense(key, customerName, salonName, deviceID, issuedDate, expiryDate, 
 		DeviceID:       deviceID,
 		IssuedDate:     issuedDate,
 		ExpiryDate:     expiryDate,
+		GraceUntil:     graceUntil,
 		Status:         LicenseStatusActive,
 		Signature:      signature,
 		LastValidation: now.Format(time.RFC3339),
+		LastVerifiedAt: now.Format(time.RFC3339),
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
@@ -130,4 +146,45 @@ type LicenseValidation struct {
 	DaysRemaining int    `json:"days_remaining"`
 	IsRestricted  bool   `json:"is_restricted"`
 	Message       string `json:"message"`
+}
+
+// LicenseNotification represents a notification about license expiry.
+type LicenseNotification struct {
+	ID               string    `json:"id"`
+	LicenseID        string    `json:"license_id"`
+	NotificationType string    `json:"notification_type"`
+	Title            string    `json:"title"`
+	Message          string    `json:"message"`
+	IsRead           bool      `json:"is_read"`
+	IsDismissed      bool      `json:"is_dismissed"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// LicenseFileData represents the data contained in an imported license file.
+type LicenseFileData struct {
+	LicenseKey   string `json:"license_key"`
+	CustomerName string `json:"customer_name"`
+	SalonName    string `json:"salon_name"`
+	IssuedDate   string `json:"issued_date"`
+	ExpiryDate   string `json:"expiry_date"`
+	DeviceID     string `json:"device_id"`
+	Signature    string `json:"signature"`
+}
+
+// RestrictedOperation defines operations that are blocked in restricted mode.
+const (
+	OpInvoiceCreate   = "invoice.create"
+	OpCustomerCreate  = "customer.create"
+	OpSalaryGenerate  = "salary.generate"
+	OpExpenseCreate   = "expense.create"
+	OpInventoryChange = "inventory.change"
+)
+
+// RestrictedOperations is the list of all operations blocked in restricted mode.
+var RestrictedOperations = []string{
+	OpInvoiceCreate,
+	OpCustomerCreate,
+	OpSalaryGenerate,
+	OpExpenseCreate,
+	OpInventoryChange,
 }

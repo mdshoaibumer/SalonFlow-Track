@@ -10,8 +10,10 @@ import (
 
 // InvoiceService exposes invoice operations to the Wails frontend.
 type InvoiceService struct {
-	ctx context.Context
-	uc  *usecase.InvoiceUseCase
+	ctx      context.Context
+	uc       *usecase.InvoiceUseCase
+	guard    *PermissionGuard
+	licGuard *LicenseGuard
 }
 
 func NewInvoiceService(uc *usecase.InvoiceUseCase) *InvoiceService {
@@ -23,6 +25,9 @@ func (s *InvoiceService) SetContext(ctx context.Context) {
 }
 
 func (s *InvoiceService) ListInvoices(input usecase.ListInvoiceInput) (*usecase.ListInvoiceOutput, error) {
+	if err := s.guard.Require("billing.view"); err != nil {
+		return nil, err
+	}
 	return s.uc.List(s.ctx, input)
 }
 
@@ -35,6 +40,12 @@ func (s *InvoiceService) GetInvoice(id string) (*domain.Invoice, error) {
 }
 
 func (s *InvoiceService) CreateInvoice(input usecase.CreateInvoiceInput) (*domain.Invoice, error) {
+	if err := s.guard.Require("billing.create"); err != nil {
+		return nil, err
+	}
+	if err := s.licGuard.RequireActive(domain.OpInvoiceCreate); err != nil {
+		return nil, err
+	}
 	return s.uc.Create(s.ctx, input)
 }
 

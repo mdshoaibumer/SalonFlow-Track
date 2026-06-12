@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '../providers/ThemeProvider'
+import { AuthProvider } from '../providers/AuthProvider'
 import { AppRouter } from './AppRouter'
 
 beforeAll(() => {
@@ -26,27 +27,35 @@ function renderWithRouter(initialEntry = '/') {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <MemoryRouter initialEntries={[initialEntry]}>
-          <AppRouter />
-        </MemoryRouter>
+        <AuthProvider>
+          <MemoryRouter initialEntries={[initialEntry]}>
+            <AppRouter />
+          </MemoryRouter>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   )
 }
 
 describe('AppRouter', () => {
-  it('renders dashboard on root route', () => {
+  it('renders dashboard on root route', async () => {
     const { container } = renderWithRouter('/')
-    expect(container.querySelector('main')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(container.querySelector('main')).toBeInTheDocument()
+    })
   })
 
-  it('renders staff page', () => {
+  it('renders staff page', async () => {
     const { container } = renderWithRouter('/staff')
-    expect(container.querySelector('main')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(container.querySelector('main')).toBeInTheDocument()
+    })
   })
 
-  it('renders services page', () => {
+  it('renders services page', async () => {
     const { container } = renderWithRouter('/services')
-    expect(container.querySelector('main')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(container.querySelector('main')).toBeInTheDocument()
+    })
   })
 })

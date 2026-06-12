@@ -10,8 +10,9 @@ import (
 
 // PerformanceService exposes performance tracking to the Wails frontend.
 type PerformanceService struct {
-	ctx context.Context
-	uc  *usecase.PerformanceUseCase
+	ctx   context.Context
+	uc    *usecase.PerformanceUseCase
+	guard *PermissionGuard
 }
 
 func NewPerformanceService(uc *usecase.PerformanceUseCase) *PerformanceService {

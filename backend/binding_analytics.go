@@ -9,8 +9,9 @@ import (
 
 // AnalyticsService exposes analytics/reports to the Wails frontend.
 type AnalyticsService struct {
-	ctx context.Context
-	uc  *usecase.AnalyticsUseCase
+	ctx   context.Context
+	uc    *usecase.AnalyticsUseCase
+	guard *PermissionGuard
 }
 
 func NewAnalyticsService(uc *usecase.AnalyticsUseCase) *AnalyticsService {

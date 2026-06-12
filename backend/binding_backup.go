@@ -10,8 +10,9 @@ import (
 
 // BackupService exposes backup operations to the Wails frontend.
 type BackupService struct {
-	ctx context.Context
-	uc  *usecase.BackupUseCase
+	ctx   context.Context
+	uc    *usecase.BackupUseCase
+	guard *PermissionGuard
 }
 
 func NewBackupService(uc *usecase.BackupUseCase) *BackupService {

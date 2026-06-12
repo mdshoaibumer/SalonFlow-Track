@@ -16,6 +16,7 @@ import (
 	"github.com/salonflow/salonflow-track/internal/core/ports"
 	"github.com/salonflow/salonflow-track/internal/core/usecase"
 	"github.com/salonflow/salonflow-track/internal/database"
+	applogger "github.com/salonflow/salonflow-track/internal/logger"
 )
 
 // Container is the application's composition root.
@@ -53,28 +54,32 @@ type Container struct {
 	membershipRepo ports.MembershipRepository
 	cloudRepo      ports.CloudBackupRepository
 	cloudEngine    ports.CloudBackupEngine
+	authRepo       ports.AuthRepository
 
 	// Use Cases
-	staffUC      *usecase.StaffUseCase
-	serviceUC    *usecase.ServiceUseCase
-	customerUC   *usecase.CustomerUseCase
-	invoiceUC    *usecase.InvoiceUseCase
-	perfUC       *usecase.PerformanceUseCase
-	commissionUC *usecase.CommissionUseCase
-	salaryUC     *usecase.SalaryUseCase
-	expenseUC    *usecase.ExpenseUseCase
-	productUC    *usecase.ProductUseCase
-	analyticsUC  *usecase.AnalyticsUseCase
-	backupUC     *usecase.BackupUseCase
-	licenseUC    *usecase.LicenseUseCase
-	updateUC     *usecase.UpdateUseCase
-	importUC     *usecase.ImportUseCase
-	gstUC        *usecase.GSTUseCase
-	printerUC    *usecase.PrinterUseCase
-	apptUC       *usecase.AppointmentUseCase
-	whatsappUC   *usecase.WhatsAppUseCase
-	membershipUC *usecase.MembershipUseCase
-	cloudUC      *usecase.CloudBackupUseCase
+	staffUC       *usecase.StaffUseCase
+	serviceUC     *usecase.ServiceUseCase
+	customerUC    *usecase.CustomerUseCase
+	invoiceUC     *usecase.InvoiceUseCase
+	perfUC        *usecase.PerformanceUseCase
+	commissionUC  *usecase.CommissionUseCase
+	salaryUC      *usecase.SalaryUseCase
+	expenseUC     *usecase.ExpenseUseCase
+	productUC     *usecase.ProductUseCase
+	analyticsUC   *usecase.AnalyticsUseCase
+	backupUC      *usecase.BackupUseCase
+	licenseUC     *usecase.LicenseUseCase
+	updateUC      *usecase.UpdateUseCase
+	importUC      *usecase.ImportUseCase
+	gstUC         *usecase.GSTUseCase
+	printerUC     *usecase.PrinterUseCase
+	apptUC        *usecase.AppointmentUseCase
+	whatsappUC    *usecase.WhatsAppUseCase
+	membershipUC  *usecase.MembershipUseCase
+	cloudUC       *usecase.CloudBackupUseCase
+	authUC        *usecase.AuthUseCase
+	auditSvc      *usecase.AuditService
+	diagnosticsUC *usecase.DiagnosticsUseCase
 
 	// Wails Binding Services
 	StaffSvc       *StaffService
@@ -97,6 +102,11 @@ type Container struct {
 	WhatsAppSvc    *WhatsAppService
 	MembershipSvc  *MembershipService
 	CloudBackupSvc *CloudBackupService
+	AuthSvc        *AuthService
+	DiagnosticsSvc *DiagnosticsService
+
+	// Multi-logger
+	MultiLog *applogger.MultiLogger
 }
 
 // NewContainer builds the full dependency graph.
@@ -106,6 +116,7 @@ func NewContainer(cfg *config.Config, log *slog.Logger, db *database.DB) *Contai
 		log: log,
 		db:  db,
 	}
+	c.MultiLog = applogger.NewMultiLogger(cfg.Log)
 	c.initRepositories()
 	c.initUseCases()
 	c.initBindings()
@@ -140,6 +151,7 @@ func (c *Container) initRepositories() {
 	c.membershipRepo = sqlite.NewMembershipRepository(c.db.Conn(), c.log)
 	c.cloudRepo = sqlite.NewCloudBackupRepository(c.db.Conn(), c.log)
 	c.cloudEngine = cloudbackup.NewEngine()
+	c.authRepo = sqlite.NewAuthRepository(c.db.Conn(), c.log)
 }
 
 func (c *Container) initUseCases() {
@@ -163,33 +175,69 @@ func (c *Container) initUseCases() {
 	c.whatsappUC = usecase.NewWhatsAppUseCase(c.whatsappRepo, c.log)
 	c.membershipUC = usecase.NewMembershipUseCase(c.membershipRepo, c.log)
 	c.cloudUC = usecase.NewCloudBackupUseCase(c.cloudRepo, c.cloudEngine, c.cfg.Database.Path, c.log)
+	c.authUC = usecase.NewAuthUseCase(c.authRepo, c.log, c.cfg.App.Version)
+	c.auditSvc = usecase.NewAuditService(c.authRepo, c.log, c.cfg.App.Version)
+	c.diagnosticsUC = usecase.NewDiagnosticsUseCase(c.db.Conn(), c.log, c.cfg.App.Version, c.cfg.Database.Path, c.MultiLog.LogDir())
 }
 
 func (c *Container) initBindings() {
+	c.AuthSvc = NewAuthService(c.authUC, c.auditSvc)
+	c.DiagnosticsSvc = NewDiagnosticsService(c.diagnosticsUC)
+	guard := NewPermissionGuard(c.AuthSvc)
+	licGuard := NewLicenseGuard(c.licenseUC)
 	c.StaffSvc = NewStaffService(c.staffUC)
+	c.StaffSvc.guard = guard
 	c.CustomerSvc = NewCustomerService(c.customerUC)
+	c.CustomerSvc.guard = guard
+	c.CustomerSvc.licGuard = licGuard
 	c.ServiceSvc = NewServiceService(c.serviceUC)
+	c.ServiceSvc.guard = guard
 	c.InvoiceSvc = NewInvoiceService(c.invoiceUC)
+	c.InvoiceSvc.guard = guard
+	c.InvoiceSvc.licGuard = licGuard
 	c.ExpenseSvc = NewExpenseService(c.expenseUC)
+	c.ExpenseSvc.guard = guard
+	c.ExpenseSvc.licGuard = licGuard
 	c.ProductSvc = NewProductService(c.productUC)
+	c.ProductSvc.guard = guard
+	c.ProductSvc.licGuard = licGuard
 	c.PerformanceSvc = NewPerformanceService(c.perfUC)
+	c.PerformanceSvc.guard = guard
 	c.CommissionSvc = NewCommissionService(c.commissionUC)
+	c.CommissionSvc.guard = guard
 	c.SalarySvc = NewSalaryService(c.salaryUC)
+	c.SalarySvc.guard = guard
+	c.SalarySvc.licGuard = licGuard
 	c.AnalyticsSvc = NewAnalyticsService(c.analyticsUC)
+	c.AnalyticsSvc.guard = guard
 	c.BackupSvc = NewBackupService(c.backupUC)
+	c.BackupSvc.guard = guard
 	c.LicenseSvc = NewLicenseService(c.licenseUC)
+	c.LicenseSvc.guard = guard
 	c.UpdateSvc = NewUpdateService(c.updateUC)
+	c.UpdateSvc.guard = guard
 	c.ImportSvc = NewImportService(c.importUC)
+	c.ImportSvc.guard = guard
 	c.GSTSvc = NewGSTService(c.gstUC)
+	c.GSTSvc.guard = guard
 	c.PrinterSvc = NewPrinterService(c.printerUC)
+	c.PrinterSvc.guard = guard
 	c.AppointmentSvc = NewAppointmentService(c.apptUC)
+	c.AppointmentSvc.guard = guard
 	c.WhatsAppSvc = NewWhatsAppService(c.whatsappUC)
+	c.WhatsAppSvc.guard = guard
 	c.MembershipSvc = NewMembershipService(c.membershipUC)
+	c.MembershipSvc.guard = guard
 	c.CloudBackupSvc = NewCloudBackupService(c.cloudUC)
+	c.CloudBackupSvc.guard = guard
 }
 
 // SetContext propagates the Wails context to all binding services.
 func (c *Container) SetContext(ctx context.Context) {
+	licGuard := c.CustomerSvc.licGuard
+	if licGuard != nil {
+		licGuard.SetContext(ctx)
+	}
 	c.StaffSvc.SetContext(ctx)
 	c.CustomerSvc.SetContext(ctx)
 	c.ServiceSvc.SetContext(ctx)
@@ -210,6 +258,8 @@ func (c *Container) SetContext(ctx context.Context) {
 	c.WhatsAppSvc.SetContext(ctx)
 	c.MembershipSvc.SetContext(ctx)
 	c.CloudBackupSvc.SetContext(ctx)
+	c.AuthSvc.SetContext(ctx)
+	c.DiagnosticsSvc.SetContext(ctx)
 }
 
 // Bindings returns all service structs to register with Wails.
@@ -235,5 +285,7 @@ func (c *Container) Bindings() []interface{} {
 		c.WhatsAppSvc,
 		c.MembershipSvc,
 		c.CloudBackupSvc,
+		c.AuthSvc,
+		c.DiagnosticsSvc,
 	}
 }

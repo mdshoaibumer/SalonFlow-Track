@@ -1,5 +1,7 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { MainLayout } from '../layouts/MainLayout'
+import { useAuth } from '@/app/providers/AuthProvider'
+import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { StaffPage } from '@/pages/StaffPage'
 import { ServicesPage } from '@/pages/ServicesPage'
@@ -34,8 +36,30 @@ import { WhatsAppPage } from '@/pages/WhatsAppPage'
 import { MembershipPage } from '@/pages/MembershipPage'
 import { CloudBackupPage } from '@/pages/CloudBackupPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { UserManagementPage } from '@/pages/UserManagementPage'
+import { AuditLogPage } from '@/pages/AuditLogPage'
+import { DiagnosticsPage } from '@/pages/DiagnosticsPage'
+import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 
 export function AppRouter() {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-pulse text-sm text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
+    )
+  }
+
   return (
     <Routes>
       <Route element={<MainLayout />}>
@@ -73,7 +97,12 @@ export function AppRouter() {
         <Route path="/memberships" element={<MembershipPage />} />
         <Route path="/cloud-backup" element={<CloudBackupPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/users" element={<UserManagementPage />} />
+        <Route path="/audit-logs" element={<AuditLogPage />} />
+        <Route path="/diagnostics" element={<DiagnosticsPage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
       </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

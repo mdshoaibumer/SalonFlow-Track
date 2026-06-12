@@ -10,8 +10,10 @@ import (
 
 // SalaryService exposes salary operations to the Wails frontend.
 type SalaryService struct {
-	ctx context.Context
-	uc  *usecase.SalaryUseCase
+	ctx      context.Context
+	uc       *usecase.SalaryUseCase
+	guard    *PermissionGuard
+	licGuard *LicenseGuard
 }
 
 func NewSalaryService(uc *usecase.SalaryUseCase) *SalaryService {
@@ -23,6 +25,12 @@ func (s *SalaryService) SetContext(ctx context.Context) {
 }
 
 func (s *SalaryService) GenerateSalary(input usecase.GenerateSalaryInput) (*usecase.GenerateSalaryOutput, error) {
+	if err := s.guard.Require("salary.generate"); err != nil {
+		return nil, err
+	}
+	if err := s.licGuard.RequireActive(domain.OpSalaryGenerate); err != nil {
+		return nil, err
+	}
 	return s.uc.GenerateMonthlySalary(s.ctx, input)
 }
 
@@ -39,6 +47,9 @@ func (s *SalaryService) ListSalaries(input usecase.ListSalariesInput) ([]domain.
 }
 
 func (s *SalaryService) PaySalary(id string) error {
+	if err := s.guard.Require("salary.pay"); err != nil {
+		return err
+	}
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return err

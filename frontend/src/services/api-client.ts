@@ -174,7 +174,14 @@ declare global {
           GetStatus: () => Promise<any>
           Validate: () => Promise<any>
           Activate: (key: string, customerName: string, salonName: string) => Promise<any>
+          ImportLicenseFile: (fileData: number[]) => Promise<any>
+          ExportLicenseFile: () => Promise<number[]>
           Renew: (key: string) => Promise<any>
+          GetDeviceID: () => Promise<string>
+          GetNotifications: (unreadOnly: boolean) => Promise<any>
+          MarkNotificationRead: (id: string) => Promise<void>
+          DismissNotification: (id: string) => Promise<void>
+          IsOperationAllowed: (operation: string) => Promise<void>
           ListEvents: (page: number, perPage: number) => Promise<any>
         }
         UpdateService: {
@@ -251,6 +258,34 @@ declare global {
           Restore: (historyId: string) => Promise<any>
           ListHistory: (limit: number, offset: number) => Promise<any>
           GetCloudBackupStats: () => Promise<any>
+        }
+        AuthService: {
+          Login: (input: any) => Promise<any>
+          Logout: () => Promise<void>
+          GetCurrentSession: () => Promise<any>
+          IsAuthenticated: () => Promise<boolean>
+          CheckPermission: (permission: string) => Promise<void>
+          HasPermission: (permission: string) => Promise<boolean>
+          HasAnyPermission: (permissions: string[]) => Promise<boolean>
+          ChangePassword: (oldPassword: string, newPassword: string) => Promise<void>
+          GetToken: () => Promise<string>
+          SetToken: (token: string) => Promise<void>
+          GetUsers: () => Promise<any[]>
+          GetUser: (id: string) => Promise<any>
+          CreateUser: (input: any) => Promise<any>
+          UpdateUser: (input: any) => Promise<any>
+          DeleteUser: (id: string) => Promise<void>
+          ResetUserPassword: (userId: string, newPassword: string) => Promise<void>
+          AssignUserRole: (userId: string, roleId: string) => Promise<void>
+          RemoveUserRole: (userId: string, roleId: string) => Promise<void>
+          GetRoles: () => Promise<any[]>
+          GetPermissions: () => Promise<any[]>
+          GetRolePermissions: (roleId: string) => Promise<any[]>
+          GetAuditLogs: (filter: any) => Promise<any>
+        }
+        DiagnosticsService: {
+          GetDiagnostics: () => Promise<any>
+          ExportDiagnosticsBundle: () => Promise<string>
         }
       }
     }

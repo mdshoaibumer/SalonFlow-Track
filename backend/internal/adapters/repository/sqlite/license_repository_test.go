@@ -29,16 +29,18 @@ func setupLicenseTestDB(t *testing.T) *sql.DB {
 			device_id TEXT NOT NULL DEFAULT '',
 			issued_date TEXT NOT NULL,
 			expiry_date TEXT NOT NULL,
+			grace_until TEXT NOT NULL DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','grace_period','expired','suspended')),
 			signature TEXT NOT NULL DEFAULT '',
 			last_validation TEXT NOT NULL DEFAULT '',
+			last_verified_at TEXT NOT NULL DEFAULT '',
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL
 		);
 		CREATE TABLE license_events (
 			id TEXT PRIMARY KEY,
 			license_id TEXT NOT NULL REFERENCES licenses(id),
-			event_type TEXT NOT NULL CHECK (event_type IN ('activated','renewed','expired','validated','suspended','grace_started','restricted')),
+			event_type TEXT NOT NULL CHECK (event_type IN ('activated','renewed','expired','validated','suspended','grace_started','restricted','imported')),
 			event_date TEXT NOT NULL,
 			notes TEXT NOT NULL DEFAULT '',
 			created_at TEXT NOT NULL

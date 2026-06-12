@@ -10,8 +10,9 @@ import (
 
 // LicenseService exposes license operations to the Wails frontend.
 type LicenseService struct {
-	ctx context.Context
-	uc  *usecase.LicenseUseCase
+	ctx   context.Context
+	uc    *usecase.LicenseUseCase
+	guard *PermissionGuard
 }
 
 func NewLicenseService(uc *usecase.LicenseUseCase) *LicenseService {
@@ -34,8 +35,36 @@ func (s *LicenseService) Activate(key, customerName, salonName string) (*domain.
 	return s.uc.Activate(s.ctx, key, customerName, salonName)
 }
 
+func (s *LicenseService) ImportLicenseFile(fileData []byte) (*domain.License, error) {
+	return s.uc.ImportLicenseFile(s.ctx, fileData)
+}
+
+func (s *LicenseService) ExportLicenseFile() ([]byte, error) {
+	return s.uc.ExportLicenseFile(s.ctx)
+}
+
 func (s *LicenseService) Renew(key string) (*domain.License, error) {
 	return s.uc.Renew(s.ctx, key)
+}
+
+func (s *LicenseService) GetDeviceID() string {
+	return s.uc.GetDeviceID()
+}
+
+func (s *LicenseService) GetNotifications(unreadOnly bool) ([]domain.LicenseNotification, error) {
+	return s.uc.GetNotifications(s.ctx, unreadOnly)
+}
+
+func (s *LicenseService) MarkNotificationRead(id string) error {
+	return s.uc.MarkNotificationRead(s.ctx, id)
+}
+
+func (s *LicenseService) DismissNotification(id string) error {
+	return s.uc.DismissNotification(s.ctx, id)
+}
+
+func (s *LicenseService) IsOperationAllowed(operation string) error {
+	return s.uc.IsOperationAllowed(s.ctx, operation)
 }
 
 func (s *LicenseService) ListEvents(page, perPage int) ([]domain.LicenseEvent, int, error) {
@@ -44,8 +73,9 @@ func (s *LicenseService) ListEvents(page, perPage int) ([]domain.LicenseEvent, i
 
 // UpdateService exposes update operations to the Wails frontend.
 type UpdateService struct {
-	ctx context.Context
-	uc  *usecase.UpdateUseCase
+	ctx   context.Context
+	uc    *usecase.UpdateUseCase
+	guard *PermissionGuard
 }
 
 func NewUpdateService(uc *usecase.UpdateUseCase) *UpdateService {
@@ -78,8 +108,9 @@ func (s *UpdateService) ListUpdateHistory(page, perPage int) ([]domain.UpdateRec
 
 // ImportService exposes import operations to the Wails frontend.
 type ImportService struct {
-	ctx context.Context
-	uc  *usecase.ImportUseCase
+	ctx   context.Context
+	uc    *usecase.ImportUseCase
+	guard *PermissionGuard
 }
 
 func NewImportService(uc *usecase.ImportUseCase) *ImportService {

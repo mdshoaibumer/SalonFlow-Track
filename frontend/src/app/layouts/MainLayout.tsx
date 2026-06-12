@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
+import { LicenseWarningBanner } from '@/components/layout/LicenseWarningBanner'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { useNavigationShortcuts } from '@/lib/desktop-ux'
 
@@ -14,6 +15,7 @@ export function MainLayout() {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
+        <LicenseWarningBanner />
         <main className="relative flex-1 overflow-y-auto scrollbar-hidden">
           {/* Subtle ambient gradient */}
           <div className="pointer-events-none absolute inset-0 gradient-mesh opacity-60" />

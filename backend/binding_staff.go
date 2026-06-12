@@ -10,8 +10,9 @@ import (
 
 // StaffService exposes staff operations to the Wails frontend.
 type StaffService struct {
-	ctx context.Context
-	uc  *usecase.StaffUseCase
+	ctx   context.Context
+	uc    *usecase.StaffUseCase
+	guard *PermissionGuard
 }
 
 func NewStaffService(uc *usecase.StaffUseCase) *StaffService {

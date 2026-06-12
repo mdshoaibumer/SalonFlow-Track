@@ -31,21 +31,29 @@ import {
   Settings,
   ChevronRight,
   Sparkles,
+  ScrollText,
+  Activity,
+  KeyRound,
+  UserCog,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { spring } from '@/lib/motion'
+import { useAuth } from '@/app/providers/AuthProvider'
 
 interface NavItem {
   name: string
   href: string
   icon: LucideIcon
+  permission?: string
 }
 
 interface NavGroup {
   label: string
   id: string
   items: NavItem[]
+  permission?: string
 }
 
 const navGroups: NavGroup[] = [
@@ -53,73 +61,98 @@ const navGroups: NavGroup[] = [
     label: 'Main',
     id: 'main',
     items: [
-      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Billing', href: '/billing', icon: Receipt },
-      { name: 'Appointments', href: '/appointments', icon: Calendar },
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'dashboard.view' },
+      { name: 'Billing', href: '/billing', icon: Receipt, permission: 'billing.view' },
+      { name: 'Appointments', href: '/appointments', icon: Calendar, permission: 'appointments.view' },
     ],
   },
   {
     label: 'Management',
     id: 'management',
     items: [
-      { name: 'Staff', href: '/staff', icon: Users },
-      { name: 'Services', href: '/services', icon: Scissors },
-      { name: 'Customers', href: '/customers', icon: UserCircle },
-      { name: 'Memberships', href: '/memberships', icon: Crown },
+      { name: 'Staff', href: '/staff', icon: Users, permission: 'staff.read' },
+      { name: 'Services', href: '/services', icon: Scissors, permission: 'services.read' },
+      { name: 'Customers', href: '/customers', icon: UserCircle, permission: 'customers.read' },
+      { name: 'Memberships', href: '/memberships', icon: Crown, permission: 'memberships.view' },
     ],
   },
   {
     label: 'Finance',
     id: 'finance',
+    permission: 'billing.view',
     items: [
-      { name: 'Invoices', href: '/invoices', icon: FileText },
-      { name: 'Commissions', href: '/commissions', icon: Coins },
-      { name: 'Salary', href: '/salary', icon: Wallet },
-      { name: 'Advances', href: '/advances', icon: Banknote },
-      { name: 'Expenses', href: '/expenses', icon: CreditCard },
-      { name: 'Profit & Loss', href: '/profit-loss', icon: PieChart },
-      { name: 'GST & Tax', href: '/gst', icon: IndianRupee },
+      { name: 'Invoices', href: '/invoices', icon: FileText, permission: 'billing.view' },
+      { name: 'Commissions', href: '/commissions', icon: Coins, permission: 'commissions.view' },
+      { name: 'Salary', href: '/salary', icon: Wallet, permission: 'salary.view' },
+      { name: 'Advances', href: '/advances', icon: Banknote, permission: 'advances.view' },
+      { name: 'Expenses', href: '/expenses', icon: CreditCard, permission: 'expenses.view' },
+      { name: 'Profit & Loss', href: '/profit-loss', icon: PieChart, permission: 'profitloss.view' },
+      { name: 'GST & Tax', href: '/gst', icon: IndianRupee, permission: 'gst.view' },
     ],
   },
   {
     label: 'Inventory',
     id: 'inventory',
+    permission: 'inventory.view',
     items: [
-      { name: 'Products', href: '/products', icon: Package },
-      { name: 'Purchases', href: '/purchases', icon: ShoppingCart },
-      { name: 'Stock', href: '/inventory', icon: Warehouse },
+      { name: 'Products', href: '/products', icon: Package, permission: 'inventory.view' },
+      { name: 'Purchases', href: '/purchases', icon: ShoppingCart, permission: 'inventory.purchase' },
+      { name: 'Stock', href: '/inventory', icon: Warehouse, permission: 'inventory.view' },
     ],
   },
   {
     label: 'Reports',
     id: 'reports',
+    permission: 'reports.view',
     items: [
-      { name: 'Analytics', href: '/analytics', icon: LineChart },
-      { name: 'Performance', href: '/performance', icon: BarChart3 },
-      { name: 'Revenue', href: '/reports/revenue', icon: IndianRupee },
-      { name: 'Staff Reports', href: '/reports/staff', icon: Users },
-      { name: 'Customer Reports', href: '/reports/customers', icon: UserCircle },
+      { name: 'Analytics', href: '/analytics', icon: LineChart, permission: 'analytics.view' },
+      { name: 'Performance', href: '/performance', icon: BarChart3, permission: 'performance.view' },
+      { name: 'Revenue', href: '/reports/revenue', icon: IndianRupee, permission: 'reports.view' },
+      { name: 'Staff Reports', href: '/reports/staff', icon: Users, permission: 'reports.view' },
+      { name: 'Customer Reports', href: '/reports/customers', icon: UserCircle, permission: 'reports.view' },
+    ],
+  },
+  {
+    label: 'Administration',
+    id: 'admin',
+    permission: 'users.view',
+    items: [
+      { name: 'Users', href: '/users', icon: UserCog, permission: 'users.view' },
+      { name: 'Audit Logs', href: '/audit-logs', icon: ScrollText, permission: 'audit.view' },
+      { name: 'Diagnostics', href: '/diagnostics', icon: Activity, permission: 'diagnostics.view' },
+      { name: 'Change Password', href: '/change-password', icon: KeyRound },
     ],
   },
   {
     label: 'System',
     id: 'system',
     items: [
-      { name: 'Settings', href: '/settings', icon: Settings },
-      { name: 'Backups', href: '/backups', icon: HardDrive },
-      { name: 'Cloud Backup', href: '/cloud-backup', icon: Cloud },
-      { name: 'Printer', href: '/printer', icon: Printer },
-      { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquare },
-      { name: 'Import', href: '/import', icon: FileUp },
-      { name: 'License', href: '/license', icon: Shield },
-      { name: 'Updates', href: '/updates', icon: ArrowUpCircle },
+      { name: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view' },
+      { name: 'Backups', href: '/backups', icon: HardDrive, permission: 'backup.create' },
+      { name: 'Cloud Backup', href: '/cloud-backup', icon: Cloud, permission: 'backup.create' },
+      { name: 'Printer', href: '/printer', icon: Printer, permission: 'printer.use' },
+      { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquare, permission: 'whatsapp.view' },
+      { name: 'Import', href: '/import', icon: FileUp, permission: 'import.execute' },
+      { name: 'License', href: '/license', icon: Shield, permission: 'license.view' },
+      { name: 'Updates', href: '/updates', icon: ArrowUpCircle, permission: 'updates.view' },
     ],
   },
 ]
 
 function NavGroupSection({ group }: { group: NavGroup }) {
   const location = useLocation()
-  const isGroupActive = group.items.some((item) => {
+  const { hasPermission } = useAuth()
+
+  // Filter items by permission
+  const visibleItems = group.items.filter(item =>
+    !item.permission || hasPermission(item.permission)
+  )
+
+  // Hide group if no visible items or group permission not met
+  if (visibleItems.length === 0) return null
+  if (group.permission && !hasPermission(group.permission)) return null
+
+  const isGroupActive = visibleItems.some((item) => {
     if (item.href === '/') return location.pathname === '/'
     return location.pathname.startsWith(item.href)
   })
@@ -152,7 +185,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
             style={{ overflow: 'hidden' }}
           >
             <div className="space-y-0.5 pb-1">
-              {group.items.map((item) => (
+              {visibleItems.map((item) => (
                 <NavLink
                   key={item.href}
                   to={item.href}
@@ -193,6 +226,8 @@ function NavGroupSection({ group }: { group: NavGroup }) {
 }
 
 export function Sidebar() {
+  const { user, logout } = useAuth()
+
   return (
     <aside className="flex w-[240px] flex-col border-r border-sidebar-border bg-sidebar">
       {/* Brand */}
@@ -214,12 +249,32 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-sidebar-border px-4 py-3">
+      {/* Footer - User & Logout */}
+      <div className="border-t border-sidebar-border px-4 py-3 space-y-2">
+        {user && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30 text-[10px] font-bold text-violet-600">
+                {user.display_name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium truncate">{user.display_name}</p>
+                <p className="text-[9px] text-muted-foreground/60 truncate">{user.roles.join(', ')}</p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="rounded p-1.5 text-muted-foreground/60 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 transition-colors"
+              title="Logout"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <Sparkles className="h-3 w-3 text-violet-500/60" />
           <p className="text-[10.5px] text-muted-foreground/50 font-medium">
-            v0.1.0 — Desktop
+            v0.2.0 — Desktop
           </p>
         </div>
       </div>

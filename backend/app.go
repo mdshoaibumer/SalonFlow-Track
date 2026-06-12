@@ -79,6 +79,16 @@ func NewApp() (*App, error) {
 
 	container := NewContainer(cfg, log, db)
 
+	// Ensure default admin user exists
+	if err := container.authUC.EnsureDefaultAdmin(context.Background()); err != nil {
+		log.Error("failed to ensure default admin", "error", err)
+	}
+
+	// Cleanup expired sessions on startup
+	if err := container.authUC.CleanupExpiredSessions(context.Background()); err != nil {
+		log.Warn("failed to cleanup expired sessions", "error", err)
+	}
+
 	app := &App{
 		cfg:       cfg,
 		log:       log,

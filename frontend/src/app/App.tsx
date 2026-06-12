@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from './providers/ThemeProvider'
+import { AuthProvider } from './providers/AuthProvider'
 import { AppRouter } from './router/AppRouter'
 
 const queryClient = new QueryClient({
@@ -19,7 +20,9 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="salonflow-theme">
         <BrowserRouter>
-          <AppRouter />
+          <AuthProvider>
+            <AppRouter />
+          </AuthProvider>
           <Toaster
             position="bottom-right"
             toastOptions={{

@@ -10,8 +10,9 @@ import (
 
 // AppointmentService exposes appointment operations to the Wails frontend.
 type AppointmentService struct {
-	ctx context.Context
-	uc  *usecase.AppointmentUseCase
+	ctx   context.Context
+	uc    *usecase.AppointmentUseCase
+	guard *PermissionGuard
 }
 
 func NewAppointmentService(uc *usecase.AppointmentUseCase) *AppointmentService {
@@ -68,8 +69,9 @@ func (s *AppointmentService) GetAppointmentHistory(id string) ([]domain.Appointm
 
 // WhatsAppService exposes WhatsApp messaging to the Wails frontend.
 type WhatsAppService struct {
-	ctx context.Context
-	uc  *usecase.WhatsAppUseCase
+	ctx   context.Context
+	uc    *usecase.WhatsAppUseCase
+	guard *PermissionGuard
 }
 
 func NewWhatsAppService(uc *usecase.WhatsAppUseCase) *WhatsAppService {
@@ -134,8 +136,9 @@ func (s *WhatsAppService) ListRules() ([]domain.AutomationRule, error) {
 
 // MembershipService exposes membership operations to the Wails frontend.
 type MembershipService struct {
-	ctx context.Context
-	uc  *usecase.MembershipUseCase
+	ctx   context.Context
+	uc    *usecase.MembershipUseCase
+	guard *PermissionGuard
 }
 
 func NewMembershipService(uc *usecase.MembershipUseCase) *MembershipService {
@@ -200,8 +203,9 @@ func (s *MembershipService) GetMembershipStats() (*domain.MembershipStats, error
 
 // CloudBackupService exposes cloud backup operations to the Wails frontend.
 type CloudBackupService struct {
-	ctx context.Context
-	uc  *usecase.CloudBackupUseCase
+	ctx   context.Context
+	uc    *usecase.CloudBackupUseCase
+	guard *PermissionGuard
 }
 
 func NewCloudBackupService(uc *usecase.CloudBackupUseCase) *CloudBackupService {

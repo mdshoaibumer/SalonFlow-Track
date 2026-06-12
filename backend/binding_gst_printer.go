@@ -10,8 +10,9 @@ import (
 
 // GSTService exposes GST/tax operations to the Wails frontend.
 type GSTService struct {
-	ctx context.Context
-	uc  *usecase.GSTUseCase
+	ctx   context.Context
+	uc    *usecase.GSTUseCase
+	guard *PermissionGuard
 }
 
 func NewGSTService(uc *usecase.GSTUseCase) *GSTService {
@@ -56,8 +57,9 @@ func (s *GSTService) GetReport(filter domain.GSTReportFilter) (*domain.GSTReport
 
 // PrinterService exposes printing operations to the Wails frontend.
 type PrinterService struct {
-	ctx context.Context
-	uc  *usecase.PrinterUseCase
+	ctx   context.Context
+	uc    *usecase.PrinterUseCase
+	guard *PermissionGuard
 }
 
 func NewPrinterService(uc *usecase.PrinterUseCase) *PrinterService {

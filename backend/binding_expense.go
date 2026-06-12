@@ -10,8 +10,10 @@ import (
 
 // ExpenseService exposes expense operations to the Wails frontend.
 type ExpenseService struct {
-	ctx context.Context
-	uc  *usecase.ExpenseUseCase
+	ctx      context.Context
+	uc       *usecase.ExpenseUseCase
+	guard    *PermissionGuard
+	licGuard *LicenseGuard
 }
 
 func NewExpenseService(uc *usecase.ExpenseUseCase) *ExpenseService {
@@ -39,6 +41,9 @@ func (s *ExpenseService) UpdateCategory(id string, name, description string, isA
 }
 
 func (s *ExpenseService) CreateExpense(input usecase.CreateExpenseInput) (*domain.Expense, error) {
+	if err := s.licGuard.RequireActive(domain.OpExpenseCreate); err != nil {
+		return nil, err
+	}
 	return s.uc.CreateExpense(s.ctx, input)
 }
 
